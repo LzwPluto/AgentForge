@@ -316,13 +316,29 @@ class SandboxTools:
             work_dir.mkdir(parents=True, exist_ok=True)
             timeout_sec = timeout or config.command_timeout_seconds
 
-            # 创建子进程异步执行
+            # 确保 AI 专用独立隔离沙箱虚拟环境就绪
+            config.ensure_sandbox_env()
+            sb_env_path = config.get_resolved_sandbox_env()
+            scripts_dir = sb_env_path / ("Scripts" if os.name == "nt" else "bin")
+
+
+            # 构建强隔离环境变量：将 AI 专用沙箱 Scripts 置于 PATH 最前列，注入 VIRTUAL_ENV 并清空 PYTHONPATH
+            isolated_env = os.environ.copy()
+            if scripts_dir.exists():
+                isolated_env["PATH"] = f"{str(scripts_dir)}{os.pathsep}{isolated_env.get('PATH', '')}"
+                isolated_env["VIRTUAL_ENV"] = str(sb_env_path)
+            isolated_env.pop("PYTHONPATH", None)
+            isolated_env.pop("PYTHONHOME", None)
+
+            # 创建子进程在独立沙箱中异步执行
             proc = await asyncio.create_subprocess_shell(
                 command,
                 cwd=str(work_dir),
+                env=isolated_env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
+
 
             try:
                 stdout_data, stderr_data = await asyncio.wait_for(

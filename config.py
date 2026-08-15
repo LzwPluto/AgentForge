@@ -2,7 +2,7 @@ import os
 import json
 import shutil
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
@@ -168,6 +168,7 @@ class AppConfig(BaseModel):
     providers: List[APIProviderConfig] = Field(default_factory=lambda: [p.model_copy() for p in DEFAULT_PROVIDERS])
     agent_slots: List[AgentSlotConfig] = Field(default_factory=lambda: [s.model_copy() for s in DEFAULT_SLOTS])
     workspace_root: str = Field(default_factory=lambda: str(PROJECT_ROOT))
+    sandbox_env_dir: str = Field(default="sandbox_env", description="内置 AI 独立测试沙箱虚拟环境目录")
     max_loops_per_task: int = Field(default=10, description="最大循环接力轮数")
     command_timeout_seconds: int = Field(default=60)
 
@@ -204,6 +205,41 @@ class AppConfig(BaseModel):
         p = Path(self.workspace_root).resolve()
         p.mkdir(parents=True, exist_ok=True)
         return p
+
+    def get_resolved_sandbox_env(self) -> Path:
+        """获取内置 AI 独立隔离测试沙箱虚拟环境路径"""
+        p = Path(self.sandbox_env_dir)
+        if not p.is_absolute():
+            p = (PROJECT_ROOT / p).resolve()
+        return p
+
+    def get_sandbox_python_path(self) -> Optional[Path]:
+        """获取内置 AI 独立沙箱 Python 解释器路径"""
+        sb_env = self.get_resolved_sandbox_env()
+        bin_dir = "Scripts" if os.name == "nt" else "bin"
+        exe_name = "python.exe" if os.name == "nt" else "python"
+        py_exe = sb_env / bin_dir / exe_name
+        return py_exe if py_exe.exists() else None
+
+    def ensure_sandbox_env(self) -> Tuple[bool, str]:
+        """确保内置 AI 独立沙箱已构建就绪，若不存在则自动静默构建"""
+        py_exe = self.get_sandbox_python_path()
+        if py_exe and py_exe.exists():
+            return True, str(py_exe)
+
+        import sys
+        import subprocess
+        sb_env = self.get_resolved_sandbox_env()
+        try:
+            sb_env.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run([sys.executable, "-m", "venv", str(sb_env)], check=True, capture_output=True)
+            py_exe = self.get_sandbox_python_path()
+            if py_exe and py_exe.exists():
+                return True, str(py_exe)
+            return False, "未能生成 sandbox_env Python 解析器"
+        except Exception as e:
+            return False, f"构建 AI 独立沙箱环境失败: {e}"
+
 
     def sanitize(self) -> None:
         """自愈校验：修复任何无效或 Select.NULL / Select.BLANK 的供应商或模型配置"""

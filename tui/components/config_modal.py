@@ -297,11 +297,22 @@ class ConfigModal(ModalScreen[bool]):
                 # ----------------------------------------------------
                 # TAB 3: 全局与沙箱配置
                 # ----------------------------------------------------
-                with TabPane("📁 工作区与全局", id="tab_global"):
+                # ----------------------------------------------------
+                # TAB 3: 全局与沙箱配置
+                # ----------------------------------------------------
+                with TabPane("📁 工作区与沙箱", id="tab_global"):
                     with ScrollableContainer():
                         with Vertical(classes="form-group"):
                             yield Label("工作区沙箱根路径 (WORKSPACE_ROOT):", classes="form-label")
                             yield Input(value=config.workspace_root, id="global_workspace")
+
+                        with Vertical(classes="form-group"):
+                            yield Label("AI 专用隔离测试沙箱 (AI Sandbox Python):", classes="form-label")
+                            sb_py = config.get_sandbox_python_path()
+                            sb_status = f"[bold green]🟢 独立沙箱已就绪: {sb_py}[/bold green]" if sb_py else "[bold yellow]🟡 独立沙箱将在首次调用命令时自动生成[/bold yellow]"
+                            yield Static(sb_status, id="sandbox_status_label")
+                            with Horizontal():
+                                yield Button("♻️ 重置 / 重新构建 AI 沙箱环境", variant="warning", id="btn_reset_sandbox")
 
                         with Vertical(classes="form-group"):
                             yield Label("最大圆桌循环接力轮数 (MAX_LOOPS):", classes="form-label")
@@ -317,6 +328,7 @@ class ConfigModal(ModalScreen[bool]):
             with Horizontal(id="modal-footer"):
                 yield Button("◀ 返回主界面 (ESC)", variant="default", id="btn_cancel")
                 yield Button("💾 保存并应用配置", variant="success", id="btn_save")
+
 
     def _save_current_provider_form(self) -> None:
         idx = self.current_provider_idx
@@ -464,8 +476,30 @@ class ConfigModal(ModalScreen[bool]):
                 next_idx = max(0, self.current_provider_idx - 1)
                 self._refresh_provider_ui(next_idx)
 
+        elif btn_id == "btn_reset_sandbox":
+            import shutil
+            sb_env = config.get_resolved_sandbox_env()
+            if sb_env.exists():
+                try:
+                    shutil.rmtree(sb_env, ignore_errors=True)
+                except Exception:
+                    pass
+            ok, msg = config.ensure_sandbox_env()
+            sb_py = config.get_sandbox_python_path()
+            try:
+                lbl = self.query_one("#sandbox_status_label", Static)
+                if ok and sb_py:
+                    lbl.update(f"[bold green]🟢 独立沙箱已成功重置就绪: {sb_py}[/bold green]")
+                    self.notify("✅ AI 独立沙箱虚拟环境已成功构建并就绪！", timeout=4)
+                else:
+                    lbl.update(f"[bold red]❌ 沙箱构建异常: {msg}[/bold red]")
+                    self.notify(f"❌ 沙箱构建异常: {msg}", severity="error", timeout=5)
+            except Exception:
+                pass
+
         elif btn_id in ("btn_save", "btn_top_save"):
             self.action_save_and_dismiss()
+
 
         elif btn_id in ("btn_cancel", "btn_top_cancel"):
             self.action_dismiss_modal()
