@@ -3,4 +3,5 @@ sandbox_env/
 __pycache__/
 *.pyc
 *.pyo
+*.zip
 .git/
