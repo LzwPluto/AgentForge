@@ -1,8 +1,10 @@
 import time
 from typing import Optional, Dict, Any
+from rich.text import Text
 from textual.containers import ScrollableContainer
 from textual.widgets import Static, Collapsible, TextArea
 from core.memory import AgentMessage
+
 
 MAX_VISIBLE_MESSAGES = 25  # 活跃面板最多保留消息块数，多余的自动从顶部清理以防内存过高与卡顿
 
@@ -158,18 +160,18 @@ class AgentLogPanel(ScrollableContainer):
             self._current_stream_content += token
             if self._current_stream_widget is None:
                 self._prune_old_messages()
-                new_widget = Static(
-                    f"{self._current_stream_content} [blink bold bright_green]▌[/blink bold bright_green]"
-                )
+                t_obj = Text(self._current_stream_content)
+                t_obj.append(" ▌", style="blink bold bright_green")
+                new_widget = Static(t_obj)
                 self._current_stream_widget = new_widget
                 self.mount(new_widget)
                 self._last_stream_flush = now
             else:
                 # 节流刷新
                 if now - self._last_stream_flush > 0.05:
-                    self._current_stream_widget.update(
-                        f"{self._current_stream_content} [blink bold bright_green]▌[/blink bold bright_green]"
-                    )
+                    t_obj = Text(self._current_stream_content)
+                    t_obj.append(" ▌", style="blink bold bright_green")
+                    self._current_stream_widget.update(t_obj)
                     self._last_stream_flush = now
 
             self._smart_scroll_end()
@@ -192,10 +194,10 @@ class AgentLogPanel(ScrollableContainer):
                 self.mount(c_w)
 
             if self._current_stream_widget is not None:
-                self._current_stream_widget.update(f"{msg.content}\n")
+                self._current_stream_widget.update(Text(msg.content + "\n"))
             elif msg.content.strip():
                 self._prune_old_messages()
-                self.mount(Static(f"{msg.content}\n"))
+                self.mount(Static(Text(msg.content + "\n")))
 
             self._current_stream_sender_id = None
             self._current_stream_widget = None
@@ -211,7 +213,8 @@ class AgentLogPanel(ScrollableContainer):
             self._current_thinking_body.load_text(self._current_thinking_text)
             self._current_thinking_widget.title = f"💭 Thinking (思考完毕 · 共 {len(self._current_thinking_text)} 字)"
         if self._current_stream_widget is not None:
-            self._current_stream_widget.update(f"{self._current_stream_content}\n")
+            self._current_stream_widget.update(Text(self._current_stream_content + "\n"))
+
 
         self._current_stream_sender_id = None
         self._current_stream_widget = None

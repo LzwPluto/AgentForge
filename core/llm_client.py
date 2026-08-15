@@ -88,9 +88,15 @@ class LLMClient:
             "messages": messages,
             "temperature": temperature,
         }
+        if "o1" in target_model.lower() or "o3" in target_model.lower():
+            kwargs["max_completion_tokens"] = 8192
+        else:
+            kwargs["max_tokens"] = 8192
+
         if tools:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
+
 
         if thinking_mode == "off":
             kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
