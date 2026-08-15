@@ -132,18 +132,30 @@ class DynamicAgent:
                 assistant_msg["tool_calls"] = raw_tc_list
                 chat_context.append(assistant_msg)
 
+                # 工具中文名称对照
+                tool_names_map = {
+                    "write_file": "写入文件",
+                    "edit_file_exact": "编辑文件",
+                    "view_file": "查看文件",
+                    "list_dir": "浏览目录",
+                    "grep_search": "全局搜索",
+                    "run_command": "运行命令",
+                    "get_git_diff": "查看代码变更",
+                }
+
                 # 分发执行工具
                 for tc in response.tool_calls:
+                    display_tool_name = tool_names_map.get(tc.name, tc.name)
                     self.memory.update_agent_state(
                         self.slot_id,
                         AgentStatus.EXECUTING_TOOL,
-                        f"调用工具: {tc.name}",
+                        f"调用工具: {display_tool_name}",
                     )
                     self.memory.log_message(
                         sender_id=self.slot_id,
                         sender_name=self.name,
                         sender_icon=self.icon,
-                        content=f"🛠️ [调用工具 {tc.name}]:\n参数: {json.dumps(tc.arguments, ensure_ascii=False, indent=2)}",
+                        content=f"🛠️ 正在调用工具: [bold cyan]{display_tool_name} ({tc.name})[/bold cyan] [blink bold yellow]⚙️ 正在执行中...[/blink bold yellow]",
                         msg_type="tool_call",
                         metadata={"tool_name": tc.name, "args": tc.arguments},
                     )
@@ -162,14 +174,18 @@ class DynamicAgent:
                         "success": tool_res.success,
                     })
 
+                    status_icon = "✔" if tool_res.success else "✖"
+                    status_color = "green" if tool_res.success else "red"
+                    status_desc = "执行完毕" if tool_res.success else "执行异常"
                     self.memory.log_message(
                         sender_id=self.slot_id,
                         sender_name=self.name,
                         sender_icon=self.icon,
-                        content=f"📋 [工具 {tc.name} 返回结果]:\n{result_str[:600]}" + ("..." if len(result_str) > 600 else ""),
+                        content=f"[{status_color}]{status_icon} 工具 {display_tool_name} ({tc.name}) {status_desc}[/{status_color}]",
                         msg_type="tool_result",
                         metadata={"success": tool_res.success},
                     )
+
 
                     if tc.name in ("write_file", "edit_file_exact"):
                         self.memory.publish(EventType.DIFF_UPDATED, {

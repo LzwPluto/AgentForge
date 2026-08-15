@@ -222,9 +222,10 @@ class AgentLogPanel(ScrollableContainer):
 
         # 根据消息类型渲染结构化面板
         if msg.msg_type == "tool_call":
-            self.mount(Static(f"\n[dim]{time_str}[/dim] {sender_badge} [cyan]{msg.content}[/cyan]"))
+            self.mount(Static(f"\n[dim]{time_str}[/dim] {sender_badge} {msg.content}"))
         elif msg.msg_type == "tool_result":
-            self.mount(Static(f"[dim]{time_str}[/dim] {sender_badge} [dim cyan]{msg.content}[/dim cyan]\n"))
+            self.mount(Static(f"[dim]{time_str}[/dim] {sender_badge} {msg.content}\n"))
+
         elif msg.msg_type == "error":
             self.mount(Static(f"\n[dim]{time_str}[/dim] {sender_badge} [bold red]{msg.content}[/bold red]\n"))
         elif msg.msg_type == "handoff":

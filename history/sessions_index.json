@@ -1,5 +1,16 @@
 [
   {
+    "session_id": "20260815_210709",
+    "timestamp": 1786799229.745777,
+    "date_str": "2026-08-15 21:07:09",
+    "goal": "续写悬疑小说第三章",
+    "total_rounds": 1,
+    "message_count": 35,
+    "success": true,
+    "json_file": "session_20260815_210709.json",
+    "md_file": "session_20260815_210709.md"
+  },
+  {
     "session_id": "20260815_170001",
     "timestamp": 1786784401.481082,
     "date_str": "2026-08-15 17:00:01",
