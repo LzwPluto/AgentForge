@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 import argparse
 import asyncio
 from pathlib import Path
@@ -9,9 +10,36 @@ project_root = Path(__file__).parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
+# Windows 平台专用：消除 Python 3.8+ Windows ProactorEventLoop 退出时管道关闭析构告警异常
+if platform.system() == "Windows":
+    try:
+        from asyncio.proactor_events import _ProactorBasePipeTransport
+        _orig_pipe_del = _ProactorBasePipeTransport.__del__
+        def _silent_pipe_del(self, *args, **kwargs):
+            try:
+                _orig_pipe_del(self, *args, **kwargs)
+            except Exception:
+                pass
+        _ProactorBasePipeTransport.__del__ = _silent_pipe_del
+    except Exception:
+        pass
+
+    try:
+        from asyncio.base_subprocess import BaseSubprocessTransport
+        _orig_subp_del = BaseSubprocessTransport.__del__
+        def _silent_subp_del(self, *args, **kwargs):
+            try:
+                _orig_subp_del(self, *args, **kwargs)
+            except Exception:
+                pass
+        BaseSubprocessTransport.__del__ = _silent_subp_del
+    except Exception:
+        pass
+
 from config import config
 from core.memory import SharedMemory, EventType, AgentMessage
 from core.orchestrator import Orchestrator
+
 
 
 def parse_args():

@@ -144,9 +144,29 @@ class AgentLogPanel(ScrollableContainer):
             else:
                 # 节流刷新：每 60ms 刷新一次 UI，保障流畅度
                 if now - self._last_thinking_flush > 0.06:
+                    prev_y = self._current_thinking_body.scroll_y
+                    was_at_end = (
+                        self._current_thinking_body.is_vertical_scroll_end
+                        or prev_y >= self._current_thinking_body.max_scroll_y - 2
+                        or prev_y == 0
+                    )
                     self._current_thinking_body.load_text(self._current_thinking_text)
                     self._current_thinking_widget.title = f"💭 Thinking (深度思考中 · {len(self._current_thinking_text)} 字)..."
+                    if was_at_end:
+                        try:
+                            doc = self._current_thinking_body.document
+                            last_line = max(0, doc.line_count - 1)
+                            self._current_thinking_body.move_cursor((last_line, len(doc.get_line(last_line))))
+                            self._current_thinking_body.scroll_end(animate=False)
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            self._current_thinking_body.scroll_to(y=prev_y, animate=False)
+                        except Exception:
+                            pass
                     self._last_thinking_flush = now
+
             
             self._smart_scroll_end()
         else:
