@@ -219,8 +219,10 @@ class LLMClient:
         kwargs: Dict[str, Any],
         target_model: str,
         target_url: str,
+        thinking_mode: str = "deep",
     ) -> LLMResponse:
         """非流式后备处理"""
+
         try:
             res = await client.chat.completions.create(**kwargs)
             choice = res.choices[0]

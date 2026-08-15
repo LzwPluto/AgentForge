@@ -157,16 +157,31 @@ class Orchestrator:
             )
             vote_messages.append({"role": "user", "content": vote_prompt})
 
+            def _vote_token_stream(token: str, is_thinking: bool = False):
+                if getattr(self.memory, "is_cancelled", False):
+                    raise asyncio.CancelledError("协同任务已被终止")
+                self.memory.publish(EventType.TOKEN_STREAM, {
+                    "slot_id": slot_cfg.slot_id,
+                    "sender_name": f"{slot_cfg.name} (表决审查)",
+                    "sender_icon": "🗳️",
+                    "token": token,
+                    "is_thinking": is_thinking,
+                })
+
             try:
                 res = await self.llm_client.chat(
                     messages=vote_messages,
                     tools=None,
                     provider_id=slot_cfg.provider_id,
                     model=slot_cfg.model,
+                    thinking_mode="deep",
+                    on_token_stream=_vote_token_stream,
                 )
                 vote_text = (res.content or "").strip()
+                thinking_content = res.thinking_content or ""
             except Exception as e:
                 vote_text = f"投票评估异常: {e} 【投票: 同意结束】"
+                thinking_content = ""
 
             is_agree = ("同意结束" in vote_text) and ("继续修改" not in vote_text)
             votes[slot_cfg.slot_id] = (is_agree, vote_text)
@@ -174,11 +189,13 @@ class Orchestrator:
             badge_txt = "✅ 赞成结束" if is_agree else "❌ 提议继续"
             self.memory.log_message(
                 sender_id=slot_cfg.slot_id,
-                sender_name=slot_cfg.name,
+                sender_name=f"{slot_cfg.name} (表决审查)",
                 sender_icon=slot_cfg.icon,
                 content=f"🗳️ 【表决结果: {badge_txt}】\n{vote_text}",
+                thinking_content=thinking_content,
                 msg_type="vote",
             )
+
 
         # 统计投票结果
         agree_count = sum(1 for is_agree, _ in votes.values() if is_agree)

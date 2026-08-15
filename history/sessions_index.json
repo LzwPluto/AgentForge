@@ -1,5 +1,16 @@
 [
   {
+    "session_id": "20260815_213723",
+    "timestamp": 1786801043.2396994,
+    "date_str": "2026-08-15 21:37:23",
+    "goal": "请作家和审核员审核前几章的严谨性并予以修改",
+    "total_rounds": 1,
+    "message_count": 28,
+    "success": true,
+    "json_file": "session_20260815_213723.json",
+    "md_file": "session_20260815_213723.md"
+  },
+  {
     "session_id": "20260815_212649",
     "timestamp": 1786800409.818532,
     "date_str": "2026-08-15 21:26:49",
