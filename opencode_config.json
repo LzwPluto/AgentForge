@@ -1,0 +1,180 @@
+{
+  "providers": [
+    {
+      "id": "deepseek",
+      "name": "DeepSeek 官方",
+      "base_url": "https://api.deepseek.com/v1",
+      "api_key": "sk-d2f1934f40b94938a41a3a1c58b9e2b3",
+      "models": [
+        "deepseek-chat",
+        "deepseek-reasoner"
+      ]
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI 官方",
+      "base_url": "https://api.openai.com/v1",
+      "api_key": "",
+      "models": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "o1-mini",
+        "o3-mini"
+      ]
+    },
+    {
+      "id": "qwen",
+      "name": "阿里通义千问 (DashScope)",
+      "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "api_key": "",
+      "models": [
+        "qwen-max",
+        "qwen-plus",
+        "qwen-turbo",
+        "qwen2.5-coder-32b-instruct"
+      ]
+    },
+    {
+      "id": "siliconflow",
+      "name": "硅基流动 (SiliconFlow)",
+      "base_url": "https://api.siliconflow.cn/v1",
+      "api_key": "",
+      "models": [
+        "deepseek-ai/DeepSeek-V3",
+        "deepseek-ai/DeepSeek-R1",
+        "Qwen/Qwen2.5-Coder-32B-Instruct"
+      ]
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama 本地大模型",
+      "base_url": "http://localhost:11434/v1",
+      "api_key": "ollama",
+      "models": [
+        "qwen2.5-coder",
+        "deepseek-r1:14b",
+        "llama3.1"
+      ]
+    },
+    {
+      "id": "custom_1786781101908",
+      "name": "MoreCode",
+      "base_url": "https://api.morecode.top/v1",
+      "api_key": "sk-nHJzbh91lH7wgeOtR9KXPZxA3RCy5wN3pjHur9Xo4rlYvyIB",
+      "models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    }
+  ],
+  "agent_slots": [
+    {
+      "slot_id": "slot_1",
+      "slot_index": 1,
+      "enabled": true,
+      "name": "作家",
+      "icon": "✍️",
+      "role_type": "writer",
+      "system_prompt": "你是一位富有创意和文采的专业主创/作家。负责根据用户目标进行大纲构思、正文创作与草稿编写。你可以使用 write_file 编写章节或代码文件，使用 edit_file_exact 修改文本。在圆桌群聊中，你与审核员及其他团队成员紧密配合，听取他们的审校反馈并持续迭代。",
+      "provider_id": "custom_1786781101908",
+      "model": "deepseek-v4-flash",
+      "allow_tools": true,
+      "allowed_tools": [
+        "view_file",
+        "write_file",
+        "edit_file_exact",
+        "list_dir",
+        "grep_search",
+        "run_command",
+        "get_git_diff"
+      ]
+    },
+    {
+      "slot_id": "slot_2",
+      "slot_index": 2,
+      "enabled": true,
+      "name": "审核员",
+      "icon": "🧐",
+      "role_type": "reviewer",
+      "system_prompt": "你是一位严谨细致的首席审核与润色专家。负责紧跟作家的每一轮创作内容，仔细审校逻辑连贯性、设定一致性、文笔文采或代码质量。你可以使用 view_file 查看最新文件，使用 edit_file_exact 直接对文件进行润色修正，或在发言中提供精辟的修改建议。当确认全部内容已打磨完善时，请在回复中输出【目标已达成】。",
+      "provider_id": "custom_1786781101908",
+      "model": "deepseek-v4-flash",
+      "allow_tools": true,
+      "allowed_tools": [
+        "view_file",
+        "write_file",
+        "edit_file_exact",
+        "list_dir",
+        "grep_search",
+        "run_command",
+        "get_git_diff"
+      ]
+    },
+    {
+      "slot_id": "slot_3",
+      "slot_index": 3,
+      "enabled": false,
+      "name": "全栈专家",
+      "icon": "💻",
+      "role_type": "coder",
+      "system_prompt": "你是一个全能的工程开发与技术拓展专家。负责编写高质量的代码实现、自动化脚本、数据处理或技术支撑。可以使用全量沙箱工具完成文件编写与调试。",
+      "provider_id": "deepseek",
+      "model": "deepseek-chat",
+      "allow_tools": true,
+      "allowed_tools": [
+        "view_file",
+        "write_file",
+        "edit_file_exact",
+        "list_dir",
+        "grep_search",
+        "run_command",
+        "get_git_diff"
+      ]
+    },
+    {
+      "slot_id": "slot_4",
+      "slot_index": 4,
+      "enabled": false,
+      "name": "测试员",
+      "icon": "🏃",
+      "role_type": "runner",
+      "system_prompt": "你是一个专业的验证与运行测试专家。负责执行命令、运行脚本或检查一致性，确保所有产出无错误。",
+      "provider_id": "deepseek",
+      "model": "deepseek-chat",
+      "allow_tools": true,
+      "allowed_tools": [
+        "view_file",
+        "write_file",
+        "edit_file_exact",
+        "list_dir",
+        "grep_search",
+        "run_command",
+        "get_git_diff"
+      ]
+    },
+    {
+      "slot_id": "slot_5",
+      "slot_index": 5,
+      "enabled": false,
+      "name": "总策划",
+      "icon": "👔",
+      "role_type": "lead",
+      "system_prompt": "你是一个高屋建瓴的总策划与架构统筹专家。负责把控全局方向与最终交付验收。",
+      "provider_id": "deepseek",
+      "model": "deepseek-chat",
+      "allow_tools": true,
+      "allowed_tools": [
+        "view_file",
+        "write_file",
+        "edit_file_exact",
+        "list_dir",
+        "grep_search",
+        "run_command",
+        "get_git_diff"
+      ]
+    }
+  ],
+  "workspace_root": "D:\\多Agent联合\\测试软件",
+  "max_loops_per_task": 10,
+  "command_timeout_seconds": 60
+}

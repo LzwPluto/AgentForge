@@ -1,0 +1,24 @@
+[
+  {
+    "session_id": "20260815_170001",
+    "timestamp": 1786784401.481082,
+    "date_str": "2026-08-15 17:00:01",
+    "goal": "根据悬疑小说第一章雨夜写第二章内容",
+    "total_rounds": 2,
+    "message_count": 71,
+    "success": true,
+    "json_file": "session_20260815_170001.json",
+    "md_file": "session_20260815_170001.md"
+  },
+  {
+    "session_id": "20260815_163800",
+    "timestamp": 1786783080.860556,
+    "date_str": "2026-08-15 16:38:00",
+    "goal": "写一部悬疑小说的第一章节，大致内容为夜间杀人案，逻辑清晰有条理，有理有据",
+    "total_rounds": 1,
+    "message_count": 43,
+    "success": true,
+    "json_file": "session_20260815_163800.json",
+    "md_file": "session_20260815_163800.md"
+  }
+]
