@@ -207,18 +207,51 @@ class DynamicAgent:
                 continue
             else:
                 chat_context.append(assistant_msg)
-                final_answer = response.content or ""
+                final_answer = (response.content or "").strip()
+                thinking_text = (response.thinking_content or "").strip()
+
+                # 若模型进行了深度思考但未输出正文发言，自动触发快速总结补齐
+                if not final_answer and thinking_text:
+                    self.memory.update_agent_state(self.slot_id, AgentStatus.SPEAKING, "基于深度思考快速生成正式回复...")
+                    try:
+                        followup_messages = list(chat_context)
+                        # 将思考内容包装后请求大模型直接输出最终正文
+                        followup_messages.append({
+                            "role": "user",
+                            "content": (
+                                "【系统提醒】：你刚才完成了深度思考，但未输出最终正式发言。\n"
+                                "请根据你刚才的完整思考结论，立即直接输出你的最终正式答复、操作结论与向团队的汇报发言（直接输出正文）："
+                            )
+                        })
+                        quick_res = await self.llm_client.chat(
+                            messages=followup_messages,
+                            provider_id=self.provider_id,
+                            model=self.model,
+                            thinking_mode="off",
+                            on_token_stream=_token_stream_wrapper,
+                        )
+                        if quick_res.content and quick_res.content.strip():
+                            final_answer = quick_res.content.strip()
+                    except Exception:
+                        pass
+
+                    # 兜底保障：若补齐未成功，从深度思考文本末尾截取核心推论与结论
+                    if not final_answer:
+                        tail_snippet = thinking_text[-600:].strip()
+                        final_answer = f"（已完成深度思考，核心结论与方案）：\n{tail_snippet}"
+
                 self.memory.log_message(
                     sender_id=self.slot_id,
                     sender_name=self.name,
                     sender_icon=self.icon,
                     content=final_answer,
-                    thinking_content=response.thinking_content or "",
+                    thinking_content=thinking_text,
                     msg_type="thought",
                     tool_calls=tool_calls_executed,
                     tool_results=tool_results_recorded,
                 )
                 break
+
 
         self.memory.update_agent_state(self.slot_id, AgentStatus.IDLE, "发言完毕，等待下一轮")
         return final_answer

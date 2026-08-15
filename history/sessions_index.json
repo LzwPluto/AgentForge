@@ -1,5 +1,16 @@
 [
   {
+    "session_id": "20260815_221047",
+    "timestamp": 1786803047.370898,
+    "date_str": "2026-08-15 22:10:47",
+    "goal": "当前项目中有一道数学建模的赛题，请你们完成第一题，并给出txt的论文",
+    "total_rounds": 1,
+    "message_count": 55,
+    "success": true,
+    "json_file": "session_20260815_221047.json",
+    "md_file": "session_20260815_221047.md"
+  },
+  {
     "session_id": "20260815_213723",
     "timestamp": 1786801043.2396994,
     "date_str": "2026-08-15 21:37:23",
