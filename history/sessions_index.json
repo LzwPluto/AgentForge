@@ -1,5 +1,16 @@
 [
   {
+    "session_id": "20260815_212649",
+    "timestamp": 1786800409.818532,
+    "date_str": "2026-08-15 21:26:49",
+    "goal": "续写第四章",
+    "total_rounds": 1,
+    "message_count": 32,
+    "success": true,
+    "json_file": "session_20260815_212649.json",
+    "md_file": "session_20260815_212649.md"
+  },
+  {
     "session_id": "20260815_210709",
     "timestamp": 1786799229.745777,
     "date_str": "2026-08-15 21:07:09",

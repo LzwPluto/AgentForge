@@ -157,8 +157,11 @@ class DynamicAgent:
                         sender_icon=self.icon,
                         content=f"🛠️ 正在调用工具: [bold cyan]{display_tool_name} ({tc.name})[/bold cyan] [blink bold yellow]⚙️ 正在执行中...[/blink bold yellow]",
                         msg_type="tool_call",
-                        metadata={"tool_name": tc.name, "args": tc.arguments},
+                        metadata={"tool_id": tc.id, "tool_name": tc.name, "args": tc.arguments},
                     )
+
+                    # 让出事件循环，确保 TUI 立即渲染出“正在执行中...”和齿轮动画
+                    await asyncio.sleep(0.06)
 
                     tool_res = await ToolDispatcher.dispatch(tc.name, tc.arguments)
                     result_str = tool_res.to_string()
@@ -175,16 +178,17 @@ class DynamicAgent:
                     })
 
                     status_icon = "✔" if tool_res.success else "✖"
-                    status_color = "green" if tool_res.success else "red"
-                    status_desc = "执行完毕" if tool_res.success else "执行异常"
+                    status_color = "bold green" if tool_res.success else "bold red"
+                    status_desc = "执行完毕" if tool_res.success else "执行失败"
                     self.memory.log_message(
                         sender_id=self.slot_id,
                         sender_name=self.name,
                         sender_icon=self.icon,
                         content=f"[{status_color}]{status_icon} 工具 {display_tool_name} ({tc.name}) {status_desc}[/{status_color}]",
                         msg_type="tool_result",
-                        metadata={"success": tool_res.success},
+                        metadata={"tool_id": tc.id, "tool_name": tc.name, "success": tool_res.success},
                     )
+
 
 
                     if tc.name in ("write_file", "edit_file_exact"):

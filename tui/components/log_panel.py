@@ -52,6 +52,8 @@ class AgentLogPanel(ScrollableContainer):
         self._current_stream_content: str = ""
         self._last_thinking_flush: float = 0.0
         self._last_stream_flush: float = 0.0
+        self._active_tool_widgets: Dict[str, Tuple[Static, str, str, str]] = {}
+
 
     def on_mount(self) -> None:
         self.mount(Static("[bold green]🌟 OpenCode 多 API & 多 Agent 自定义协同平台已就绪！[/bold green]\n"))
@@ -222,11 +224,21 @@ class AgentLogPanel(ScrollableContainer):
 
         # 根据消息类型渲染结构化面板
         if msg.msg_type == "tool_call":
-            self.mount(Static(f"\n[dim]{time_str}[/dim] {sender_badge} {msg.content}"))
+            tool_id = (msg.metadata or {}).get("tool_id")
+            w = Static(f"\n[dim]{time_str}[/dim] {sender_badge} {msg.content}")
+            self.mount(w)
+            if tool_id:
+                self._active_tool_widgets[str(tool_id)] = (w, msg.sender_icon, msg.sender_name, time_str)
         elif msg.msg_type == "tool_result":
-            self.mount(Static(f"[dim]{time_str}[/dim] {sender_badge} {msg.content}\n"))
-
+            tool_id = (msg.metadata or {}).get("tool_id")
+            if tool_id and str(tool_id) in self._active_tool_widgets:
+                w, s_icon, s_name, t_str = self._active_tool_widgets.pop(str(tool_id))
+                badge = f"[bold #38bdf8]{s_icon} {s_name}[/bold #38bdf8]"
+                w.update(f"\n[dim]{t_str}[/dim] {badge} {msg.content}")
+            else:
+                self.mount(Static(f"[dim]{time_str}[/dim] {sender_badge} {msg.content}\n"))
         elif msg.msg_type == "error":
+
             self.mount(Static(f"\n[dim]{time_str}[/dim] {sender_badge} [bold red]{msg.content}[/bold red]\n"))
         elif msg.msg_type == "handoff":
             self.mount(Static(f"\n[bold yellow]───────── {msg.content} ─────────[/bold yellow]"))

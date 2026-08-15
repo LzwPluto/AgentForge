@@ -21,6 +21,7 @@ class Orchestrator:
         self._running = False
         self._cancel_requested = False
         self._is_paused = False
+        self.pending_revisions: List[str] = []
         self._pause_event = asyncio.Event()
         self._pause_event.set()
 
@@ -53,8 +54,8 @@ class Orchestrator:
         self.memory.publish(EventType.WORKFLOW_PAUSED, None)
 
     async def resume(self, steering_feedback: str = "") -> None:
-        """恢复执行，可携带用户手动调整的方向意见"""
-        if not self._is_paused and self._running:
+        """恢复执行已暂停的工作流，可附带用户方向调整指导"""
+        if not self._is_paused:
             return
 
         if steering_feedback.strip():
@@ -82,6 +83,7 @@ class Orchestrator:
         self.memory.is_cancelled = True
         self._is_paused = False
         self._running = False
+        self.pending_revisions.clear()
         self._pause_event.set()
 
         # 立即重置所有槽位为 IDLE 待命状态并通知 UI 刷新
@@ -110,7 +112,7 @@ class Orchestrator:
         goal: str,
         round_idx: int,
     ) -> bool:
-        """执行全员在线民主投票裁决：所有在场 Agent 依次投票评估是否可以结束"""
+        """执行全员在线民主投票裁决：所有在场 Agent 依次投票评估是否可以结束，确保所有建议均得到处理"""
         if len(enabled_slots) == 1:
             return True
 
@@ -118,10 +120,15 @@ class Orchestrator:
             sender_id="system",
             content=(
                 f"🗳️ ═════════ 启动【圆桌全员在线表决】(第 {round_idx} 轮) ═════════\n"
-                f"在场 {len(enabled_slots)} 位成员将依次对当前成果进行综合评估，民主投票判定是否达成目标！"
+                f"在场 {len(enabled_slots)} 位成员将依次对当前成果进行综合评估，严格审查所有建议是否均已处理完毕！"
             ),
             msg_type="vote",
         )
+
+        pending_checklist_str = ""
+        if self.pending_revisions:
+            items = "\n".join([f"  • {r}" for r in self.pending_revisions])
+            pending_checklist_str = f"\n📋 【此前表决提出的待处理修改建议清单】:\n{items}\n"
 
         votes: Dict[str, Tuple[bool, str]] = {}
 
@@ -134,11 +141,14 @@ class Orchestrator:
             vote_prompt = (
                 f"【多智能体全员在线表决阶段】:\n"
                 f"🎯 用户总目标是: 【{goal}】\n"
+                f"{pending_checklist_str}"
                 f"请回顾群聊中场内所有成员至今的全部发言、已编写/修改的文件与最新成果。\n"
-                f"作为【{slot_cfg.name}】，请客观评估当前成果是否已经圆满达标、可以结束协同？\n\n"
+                f"作为【{slot_cfg.name}】，请严格审查并评估：\n"
+                f"1. 此前所有提出的修改建议是否均已 100% 妥善解决与落实？\n"
+                f"2. 当前成果是否真正达标且无需进一步修改？\n\n"
                 f"请以极精炼的 1~2 句话给出理由，并在回复末尾必须明确输出二选一：\n"
-                f"👉 若认为目标已达成无须再修改，请输出: 【投票: 同意结束】\n"
-                f"👉 若认为仍有缺陷/需要修改补充，请输出: 【投票: 继续修改】（并简述下一轮需要改什么）"
+                f"👉 若确认所有建议已全部解决且目标已圆满达成，请输出: 【投票: 同意结束】\n"
+                f"👉 若发现仍有任何一条建议未被处理，或发现新的问题，请指出具体遗漏，并必须输出: 【投票: 继续修改】（并简述下一轮需要改什么）"
             )
 
             vote_messages = self.memory.get_shared_llm_messages_for_agent(
@@ -175,26 +185,31 @@ class Orchestrator:
         total_count = len(enabled_slots)
 
         if agree_count == total_count:
+            self.pending_revisions.clear()
             self.memory.log_message(
                 sender_id="system",
-                content=f"🎉 **【表决全票通过 ({agree_count}/{total_count})】** 在场所有 AI 成员一致判定目标已圆满达成！",
+                content=f"🎉 **【表决全票通过 ({agree_count}/{total_count})】** 在场所有 AI 成员一致判定全部建议已妥善解决，目标圆满达成！",
                 msg_type="handoff",
             )
             return True
         else:
+            new_pending = []
             dissent_reasons = []
             for slot_cfg in enabled_slots:
                 is_agree, v_txt = votes[slot_cfg.slot_id]
                 if not is_agree:
-                    dissent_reasons.append(f"- {slot_cfg.icon} {slot_cfg.name}: {v_txt[:100]}")
+                    clean_txt = v_txt.replace("【投票: 继续修改】", "").replace("【投票: 同意结束】", "").strip()
+                    dissent_reasons.append(f"- **{slot_cfg.icon} {slot_cfg.name}**: {clean_txt[:120]}")
+                    new_pending.append(f"{slot_cfg.name}: {clean_txt}")
             
+            self.pending_revisions = new_pending
             summary_reasons = "\n".join(dissent_reasons)
             self.memory.log_message(
                 sender_id="system",
                 content=(
-                    f"🔄 **【表决未全票通过 ({agree_count}/{total_count} 同意)】**\n"
-                    f"存在以下修改意见:\n{summary_reasons}\n"
-                    f"👉 将上述意见自动作为下一轮接力的重点要求，继续推进协同！"
+                    f"🔄 **【表决未全票通过 ({agree_count}/{total_count} 同意) · 待处理改进建议清单】**\n"
+                    f"{summary_reasons}\n\n"
+                    f"⚠️ **【推进指令】** 下一轮接力中，各成员必须逐项解决上述所有建议，未全部落实前表决将不会通过！"
                 ),
                 msg_type="handoff",
             )
@@ -209,12 +224,12 @@ class Orchestrator:
         self._running = True
         self._cancel_requested = False
         self.memory.is_cancelled = False
+        self.pending_revisions.clear()
         self._is_paused = False
         self._pause_event.set()
         
         self.memory.set_goal(goal)
         self.memory.sync_slots_from_config()
-
 
         enabled_slots = config.get_enabled_slots()
         if not enabled_slots:
@@ -277,7 +292,20 @@ class Orchestrator:
                     msg_type="handoff",
                 )
 
+                if self.pending_revisions and round_idx > 1:
+                    checklist_str = "\n".join([f"  {i+1}. {r}" for i, r in enumerate(self.pending_revisions)])
+                    self.memory.log_message(
+                        sender_id="system",
+                        content=(
+                            f"📌 **【第 {round_idx} 轮攻坚重点：必须逐一解决上一轮修改建议】**\n"
+                            f"{checklist_str}\n"
+                            f"👉 请在场成员优先落实上述各项改进，并在发言中答复处理情况！"
+                        ),
+                        msg_type="steering",
+                    )
+
                 any_proposed_finish = False
+
 
                 # 按槽位配置的绝对顺序依次轮流发言
                 for slot_cfg in enabled_slots:
