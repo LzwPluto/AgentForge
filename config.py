@@ -47,10 +47,15 @@ class AgentSlotConfig(BaseModel):
     provider_id: str = Field(description="绑定的 API 供应商 ID")
     model: str = Field(description="绑定的具体模型名称")
     allow_tools: bool = Field(default=True, description="是否允许该角色调用沙箱工具")
+    thinking_mode: str = Field(
+        default="deep",
+        description="思考模式: deep(深度思考), lite(轻度思考), off(关闭思考)"
+    )
     allowed_tools: List[str] = Field(
         default_factory=lambda: list(ALL_TOOLS),
         description="该角色允许调用的工具列表"
     )
+
 
 
 

@@ -67,9 +67,10 @@ class LLMClient:
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         temperature: float = 0.2,
+        thinking_mode: str = "deep",
         on_token_stream: Optional[Callable[..., None]] = None,
     ) -> LLMResponse:
-        """异步调用大模型，支持 reasoning_content 思考过程实时流式捕获"""
+        """异步调用大模型，支持 reasoning_content 思考过程实时流式捕获与思考程度调节/关闭"""
         if provider_id:
             prov = config.get_provider(provider_id)
             target_url = prov.base_url if prov else (base_url or "https://api.deepseek.com/v1")
@@ -91,11 +92,18 @@ class LLMClient:
             kwargs["tools"] = tools
             kwargs["tool_choice"] = "auto"
 
+        if thinking_mode == "off":
+            kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+            kwargs["reasoning_effort"] = "low"
+        elif thinking_mode == "lite":
+            kwargs["extra_body"] = {"thinking": {"type": "enabled", "budget_tokens": 1024}}
+            kwargs["reasoning_effort"] = "low"
+
         if on_token_stream:
             kwargs["stream"] = True
-            return await self._stream_chat(client, kwargs, target_model, target_url, on_token_stream)
+            return await self._stream_chat(client, kwargs, target_model, target_url, on_token_stream, thinking_mode=thinking_mode)
         else:
-            return await self._non_stream_chat(client, kwargs, target_model, target_url)
+            return await self._non_stream_chat(client, kwargs, target_model, target_url, thinking_mode=thinking_mode)
 
     async def _stream_chat(
         self,
@@ -104,6 +112,7 @@ class LLMClient:
         target_model: str,
         target_url: str,
         on_token_stream: Callable[..., None],
+        thinking_mode: str = "deep",
     ) -> LLMResponse:
         """流式处理并捕获思考与正文内容"""
         response_content = []
@@ -129,16 +138,18 @@ class LLMClient:
                 if chunk.choices[0].finish_reason:
                     finish_reason = chunk.choices[0].finish_reason
 
-                # 1. 捕获 DeepSeek-R1 / Qwen 等模型的原生 reasoning_content 思考流
+                # 1. 捕获思考流（若设置为关闭思考，则不向前端发送思考弹窗）
                 reasoning = getattr(delta, "reasoning_content", None)
                 if reasoning:
-                    reasoning_content.append(reasoning)
-                    _safe_emit(reasoning, is_thinking=True)
+                    if thinking_mode != "off":
+                        reasoning_content.append(reasoning)
+                        _safe_emit(reasoning, is_thinking=True)
 
                 # 2. 捕获常规回复内容流
                 if delta.content:
                     response_content.append(delta.content)
                     _safe_emit(delta.content, is_thinking=False)
+
 
                 # 3. 捕获工具调用
                 if delta.tool_calls:

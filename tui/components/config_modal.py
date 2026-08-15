@@ -28,7 +28,7 @@ def is_valid_select_value(val: Any) -> bool:
 
 
 class ConfigModal(ModalScreen[bool]):
-    """多 API 供应商管理（支持自定义新增/删除/改名）与自定义 5 角色分工设置弹窗"""
+    """多 API 供应商管理与自定义 5 角色分工（支持思考程度调节/关闭思考）设置弹窗"""
 
     BINDINGS = [
         Binding("escape", "dismiss_modal", "返回/关闭 (ESC)", show=True),
@@ -42,9 +42,9 @@ class ConfigModal(ModalScreen[bool]):
 
     #dialog {
         padding: 0 1;
-        width: 96;
+        width: 98;
         height: 94%;
-        max-height: 42;
+        max-height: 44;
         border: thick #6366f1;
         background: #0f172a;
     }
@@ -114,7 +114,7 @@ class ConfigModal(ModalScreen[bool]):
     }
 
     #slot_prompt {
-        height: 9;
+        height: 8;
         min-height: 6;
     }
 
@@ -136,7 +136,6 @@ class ConfigModal(ModalScreen[bool]):
         self.current_slot_idx = 0
         self.temp_providers = [p.model_copy() for p in config.providers]
         self.temp_slots = [s.model_copy() for s in config.agent_slots]
-        # 自愈保证有效
         self._sanitize_temp_data()
 
     def _sanitize_temp_data(self) -> None:
@@ -152,6 +151,8 @@ class ConfigModal(ModalScreen[bool]):
             m_opts = self._get_model_options_for_provider(s.provider_id)
             if not is_valid_select_value(s.model) or not any(m[1] == s.model for m in m_opts):
                 s.model = m_opts[0][1] if m_opts else "deepseek-chat"
+            if not hasattr(s, "thinking_mode") or s.thinking_mode not in ("deep", "lite", "off"):
+                s.thinking_mode = "deep"
 
     def _get_model_options_for_provider(self, provider_id: str) -> List[Tuple[str, str]]:
         """获取指定供应商的所有可用模型列表 (以下拉元组格式)"""
@@ -163,7 +164,7 @@ class ConfigModal(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
             with Horizontal(id="modal-header"):
-                yield Static("⚙️ [bold #818cf8]OpenCode 系统设置: 多 API 与自定义角色[/bold #818cf8]", id="modal-title")
+                yield Static("⚙️ [bold #818cf8]OpenCode 系统设置: 多 API 与角色分工[/bold #818cf8]", id="modal-title")
                 yield Button("◀ 返回 (ESC)", variant="default", id="btn_top_cancel", classes="header-btn")
                 yield Button("💾 保存并应用", variant="success", id="btn_top_save", classes="header-btn")
 
@@ -223,9 +224,9 @@ class ConfigModal(ModalScreen[bool]):
                             )
 
                 # ----------------------------------------------------
-                # TAB 2: 5 个角色分工与模型分配 (下拉选择)
+                # TAB 2: 5 个角色分工与思考程度设置
                 # ----------------------------------------------------
-                with TabPane("🤖 角色分工与工具权限 (最多5人)", id="tab_slots"):
+                with TabPane("🤖 角色分工与思考设置 (最多5人)", id="tab_slots"):
                     with ScrollableContainer():
                         with Horizontal(id="slot-nav"):
                             yield Button("槽位 1", id="nav_slot_0", classes="slot-btn", variant="primary")
@@ -261,13 +262,28 @@ class ConfigModal(ModalScreen[bool]):
                                     id="slot_provider_select",
                                 )
                             with Vertical(classes="form-group"):
-                                yield Label("选择绑定的模型 (下拉自动列出):", classes="sub-label")
+                                yield Label("选择绑定的模型:", classes="sub-label")
                                 initial_models = self._get_model_options_for_provider(cur_prov_val)
                                 cur_m_val = cur_slot.model if any(m[1] == cur_slot.model for m in initial_models) else initial_models[0][1]
                                 yield Select(
                                     options=initial_models,
                                     value=cur_m_val,
                                     id="slot_model_select",
+                                )
+                            with Vertical(classes="form-group"):
+                                yield Label("深度思考程度 (Thinking):", classes="sub-label")
+                                think_opts = [
+                                    ("🧠 深度思考 (Deep)", "deep"),
+                                    ("⚡ 轻度思考 (Lite)", "lite"),
+                                    ("🚫 关闭思考 (Off)", "off"),
+                                ]
+                                cur_think = getattr(cur_slot, "thinking_mode", "deep")
+                                if cur_think not in ("deep", "lite", "off"):
+                                    cur_think = "deep"
+                                yield Select(
+                                    options=think_opts,
+                                    value=cur_think,
+                                    id="slot_thinking_select",
                                 )
 
                         with Vertical(classes="form-group"):
@@ -331,7 +347,6 @@ class ConfigModal(ModalScreen[bool]):
             self.query_one("#prov_api_key", Input).value = p.api_key
             self.query_one("#prov_models", Input).value = "、".join(p.models)
 
-            # 同步刷新 Tab 2 的供应商下拉选项
             try:
                 prov_choices = [(p.name, p.id) for p in self.temp_providers]
                 slot_prov_select = self.query_one("#slot_provider_select", Select)
@@ -355,6 +370,10 @@ class ConfigModal(ModalScreen[bool]):
             if is_valid_select_value(model_val):
                 self.temp_slots[idx].model = str(model_val)
 
+            think_val = self.query_one("#slot_thinking_select", Select).value
+            if is_valid_select_value(think_val):
+                self.temp_slots[idx].thinking_mode = str(think_val)
+
             self.temp_slots[idx].system_prompt = self.query_one("#slot_prompt", TextArea).text.strip()
 
     def _load_slot_form(self, idx: int) -> None:
@@ -372,7 +391,6 @@ class ConfigModal(ModalScreen[bool]):
             target_prov = slot.provider_id if any(p.id == slot.provider_id for p in self.temp_providers) else self.temp_providers[0].id
             slot_prov_select.value = target_prov
 
-            # 动态更新并选中模型下拉项
             model_opts = self._get_model_options_for_provider(target_prov)
             model_select = self.query_one("#slot_model_select", Select)
             model_select.set_options(model_opts)
@@ -380,6 +398,11 @@ class ConfigModal(ModalScreen[bool]):
                 model_select.value = slot.model
             elif model_opts:
                 model_select.value = model_opts[0][1]
+
+            cur_think = getattr(slot, "thinking_mode", "deep")
+            if cur_think not in ("deep", "lite", "off"):
+                cur_think = "deep"
+            self.query_one("#slot_thinking_select", Select).value = cur_think
 
             self.query_one("#slot_prompt", TextArea).text = slot.system_prompt
 
@@ -423,7 +446,6 @@ class ConfigModal(ModalScreen[bool]):
             self._load_slot_form(target_idx)
 
         elif btn_id == "btn_add_provider":
-            # 新增自定义 API 供应商
             self._save_current_provider_form()
             new_idx = len(self.temp_providers)
             new_p = APIProviderConfig(
@@ -437,7 +459,6 @@ class ConfigModal(ModalScreen[bool]):
             self._refresh_provider_ui(new_idx)
 
         elif btn_id == "btn_del_provider":
-            # 删除当前选中的供应商 (保留至少 1 个)
             if len(self.temp_providers) > 1:
                 self.temp_providers.pop(self.current_provider_idx)
                 next_idx = max(0, self.current_provider_idx - 1)
@@ -450,11 +471,9 @@ class ConfigModal(ModalScreen[bool]):
             self.action_dismiss_modal()
 
     def action_dismiss_modal(self) -> None:
-        """关闭并返回主界面"""
         self.dismiss(False)
 
     def action_save_and_dismiss(self) -> None:
-        """保存配置并持久化写入磁盘与备份"""
         self._save_current_provider_form()
         self._save_current_slot_form()
 

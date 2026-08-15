@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 from typing import List, Dict, Any, Optional, Callable
 
 from config import config, AgentSlotConfig
@@ -29,15 +30,16 @@ class DynamicAgent:
         self.memory = memory
         self.llm_client = llm_client or LLMClient()
 
-        # 根据 allow_tools 开关决定是否提供沙箱工具
-        if slot_config.allow_tools and slot_config.allowed_tools:
-            self.tool_definitions = [
-                t for t in OPENAI_TOOL_DEFINITIONS
-                if t["function"]["name"] in slot_config.allowed_tools
-            ]
-        else:
-            self.tool_definitions = []
-
+    @property
+    def tool_definitions(self) -> List[Dict[str, Any]]:
+        """获取当前角色被允许调用的工具 Schema 列表"""
+        if not getattr(self.slot_config, "allow_tools", True):
+            return []
+        allowed = set(self.slot_config.allowed_tools)
+        return [
+            tool for tool in OPENAI_TOOL_DEFINITIONS
+            if tool["function"]["name"] in allowed
+        ]
 
     async def step_in_group(
         self,
@@ -79,6 +81,7 @@ class DynamicAgent:
                     tools=self.tool_definitions if self.tool_definitions else None,
                     provider_id=self.provider_id,
                     model=self.model,
+                    thinking_mode=getattr(self.slot_config, "thinking_mode", "deep"),
                     on_token_stream=_token_stream_wrapper,
                 )
             except asyncio.CancelledError:
