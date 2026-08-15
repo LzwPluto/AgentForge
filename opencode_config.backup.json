@@ -79,6 +79,7 @@
       "provider_id": "deepseek",
       "model": "deepseek-v4-flash",
       "allow_tools": true,
+      "thinking_mode": "off",
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -100,6 +101,7 @@
       "provider_id": "deepseek",
       "model": "deepseek-v4-flash",
       "allow_tools": true,
+      "thinking_mode": "off",
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -121,6 +123,7 @@
       "provider_id": "deepseek",
       "model": "deepseek-v4-flash",
       "allow_tools": true,
+      "thinking_mode": "deep",
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -142,6 +145,7 @@
       "provider_id": "deepseek",
       "model": "deepseek-v4-flash",
       "allow_tools": true,
+      "thinking_mode": "deep",
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -163,6 +167,7 @@
       "provider_id": "deepseek",
       "model": "deepseek-v4-flash",
       "allow_tools": true,
+      "thinking_mode": "deep",
       "allowed_tools": [
         "view_file",
         "write_file",

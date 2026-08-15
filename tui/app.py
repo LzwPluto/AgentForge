@@ -277,7 +277,7 @@ class OpenCodeApp(App):
 
         self._update_control_bar_state("RUNNING")
         input_widget.value = ""
-        self.run_orchestrator_worker(goal)
+        self._current_worker = self.run_orchestrator_worker(goal)
 
     async def _trigger_resume_with_steering(self) -> None:
         input_widget = self.query_one("#input-goal", Input)
@@ -288,8 +288,10 @@ class OpenCodeApp(App):
 
     @work(exclusive=True)
     async def run_orchestrator_worker(self, goal: str) -> None:
-        await self.orchestrator.run_goal(goal)
-        self._update_control_bar_state("IDLE")
+        try:
+            await self.orchestrator.run_goal(goal)
+        finally:
+            self._update_control_bar_state("IDLE")
 
     def action_toggle_pause(self) -> None:
         if self._workflow_state == "RUNNING":
@@ -321,6 +323,11 @@ class OpenCodeApp(App):
     def action_cancel_workflow(self) -> None:
         if self._workflow_state in ("RUNNING", "PAUSED"):
             self.orchestrator.cancel()
+            if hasattr(self, "_current_worker") and self._current_worker and not self._current_worker.is_finished:
+                try:
+                    self._current_worker.cancel()
+                except Exception:
+                    pass
             self._update_control_bar_state("IDLE")
             for s in config.agent_slots:
                 self.memory.update_agent_state(s.slot_id, AgentStatus.IDLE, "已终止待命")
@@ -329,6 +336,7 @@ class OpenCodeApp(App):
                 self.query_one("#agent-cards", AgentStatusCardsWidget).refresh_cards()
             except Exception:
                 pass
+
 
 
     def action_refresh_all(self) -> None:

@@ -57,16 +57,17 @@ class AgentLogPanel(ScrollableContainer):
         self.mount(Static("[bold green]🌟 OpenCode 多 API & 多 Agent 自定义协同平台已就绪！[/bold green]\n"))
 
     def _prune_old_messages(self) -> None:
-        """自动从顶部清理多余历史消息，保持视口极速流畅与轻量内存"""
+        """安全从顶部清理多余历史消息，保持视口极速流畅与轻量内存 (杜绝 while 循环)"""
         try:
-            while len(self.children) > MAX_VISIBLE_MESSAGES:
-                first = self.children[0]
-                if first not in (self._current_stream_widget, self._current_thinking_widget):
-                    first.remove()
-                else:
-                    break
+            children_list = list(self.children)
+            excess = len(children_list) - MAX_VISIBLE_MESSAGES
+            if excess > 0:
+                for child in children_list[:excess]:
+                    if child not in (self._current_stream_widget, self._current_thinking_widget):
+                        child.remove()
         except Exception:
             pass
+
 
     def _smart_scroll_end(self) -> None:
         """智能贴底滚动：用户滚轮向上查阅历史时不强行拖拽"""
