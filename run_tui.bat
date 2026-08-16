@@ -6,9 +6,9 @@ if not exist ".venv\Scripts\python.exe" (
     call setup_env.bat
 )
 
-echo [INFO] Starting AgentForge Desktop App...
+echo [INFO] Starting AgentForge TUI Mode...
 call .venv\Scripts\activate.bat
-python main.py --app %*
+python main.py --tui %*
 
 if errorlevel 1 (
     echo.

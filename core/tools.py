@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import difflib
 import asyncio
@@ -330,13 +331,18 @@ class SandboxTools:
             isolated_env.pop("PYTHONPATH", None)
             isolated_env.pop("PYTHONHOME", None)
 
-            # 创建子进程在独立沙箱中异步执行
+            # 创建子进程在独立沙箱中异步执行 (Windows 下静默隐藏控制台窗口)
+            extra_kwargs = {}
+            if sys.platform == "win32":
+                extra_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
             proc = await asyncio.create_subprocess_shell(
                 command,
                 cwd=str(work_dir),
                 env=isolated_env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                **extra_kwargs
             )
 
 
@@ -407,6 +413,10 @@ class SandboxTools:
             if path:
                 cmd.append(path)
 
+            extra_kwargs = {}
+            if sys.platform == "win32":
+                extra_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
             res = subprocess.run(
                 cmd,
                 cwd=str(ws),
@@ -414,6 +424,7 @@ class SandboxTools:
                 text=True,
                 encoding="utf-8",
                 errors="replace",
+                **extra_kwargs
             )
             if res.returncode == 0:
                 diff_output = res.stdout.strip()

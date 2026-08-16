@@ -1,0 +1,68 @@
+[
+  {
+    "id": "web_search_enhancer",
+    "name": "联网搜索与知识增强 (Web Search)",
+    "version": "1.0.2",
+    "author": "AgentForge Ecosystem",
+    "description": "为智能体自动注入实时联网搜索、网页正文提取与最新技术文档检索能力。",
+    "icon": "🔍",
+    "enabled": false,
+    "has_settings": true,
+    "settings": {
+      "search_engine": "DuckDuckGo",
+      "max_results": 5
+    }
+  },
+  {
+    "id": "mermaid_chart_live",
+    "name": "Mermaid 架构流程图渲染器 (Live Charts)",
+    "version": "1.1.0",
+    "author": "AgentForge Ecosystem",
+    "description": "自动识别消息中的 mermaid 代码块并实时渲染为高清矢量架构图与时序流程图。",
+    "icon": "📊",
+    "enabled": true,
+    "has_settings": false,
+    "settings": {}
+  },
+  {
+    "id": "voice_speech_tts",
+    "name": "角色多重音色语音播报 (Voice TTS)",
+    "version": "1.0.0",
+    "author": "AgentForge Ecosystem",
+    "description": "在多 Agent 轮流发言接力时，为每个槽位分配不同音色的拟人化语音实时朗读输出。",
+    "icon": "🎙️",
+    "enabled": false,
+    "has_settings": true,
+    "settings": {
+      "volume": 0.8,
+      "rate": 1.0
+    }
+  },
+  {
+    "id": "vector_memory_rag",
+    "name": "超长工作区向量检索记忆 (Vector RAG)",
+    "version": "0.9.5",
+    "author": "AgentForge Ecosystem",
+    "description": "基于本地 SQLite 向量数据库为海量代码与历史长文建立语义索引与精准召回。",
+    "icon": "🗄️",
+    "enabled": false,
+    "has_settings": true,
+    "settings": {
+      "chunk_size": 500,
+      "similarity_top_k": 3
+    }
+  },
+  {
+    "id": "custom_python_hook",
+    "name": "自定义 Python 脚本钩子 (Custom Hook SDK)",
+    "version": "1.0.0",
+    "author": "Developer SDK",
+    "description": "允许在 plugins/scripts/ 目录下编写自定义 Python 钩子脚本，无缝拦截与拓展事件流水线。",
+    "icon": "🛠️",
+    "enabled": true,
+    "has_settings": true,
+    "settings": {
+      "script_path": "plugins/scripts/custom_hooks.py"
+    }
+  }
+]

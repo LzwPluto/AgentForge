@@ -9,6 +9,9 @@ def test_multi_provider_and_slots_config():
     assert len(config.providers) >= 3
 
     # 2. 测试禁用部分槽位
+    config.agent_slots[0].enabled = True
+    config.agent_slots[1].enabled = True
+    config.agent_slots[2].enabled = True
     config.agent_slots[3].enabled = False  # 禁用 Slot 4
     config.agent_slots[4].enabled = False  # 禁用 Slot 5
 

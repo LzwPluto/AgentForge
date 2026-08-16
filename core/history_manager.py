@@ -71,7 +71,7 @@ class HistoryManager:
 
         # 2. 生成人类友好的 Markdown 纪要
         md_lines = [
-            f"# OpenCode 多 Agent 协同会话记录\n",
+            f"# AgentForge 多 Agent 协同会话记录\n",
             f"- **会话 ID**: `{session_id}`",
             f"- **归档时间**: `{date_str}`",
             f"- **协同总轮数**: `{total_rounds}` 轮",

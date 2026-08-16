@@ -6,11 +6,18 @@ from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# 项目根目录路径
 PROJECT_ROOT = Path(__file__).parent.resolve()
-CONFIG_JSON_FILE = "opencode_config.json"
-CONFIG_PATH = PROJECT_ROOT / CONFIG_JSON_FILE
-BACKUP_CONFIG_PATH = PROJECT_ROOT / "opencode_config.backup.json"
+CONFIG_JSON_FILE = "agentforge_config.json"
+LEGACY_CONFIG_JSON_FILE = "opencode_config.json"
+
+if (PROJECT_ROOT / CONFIG_JSON_FILE).exists():
+    CONFIG_PATH = PROJECT_ROOT / CONFIG_JSON_FILE
+elif (PROJECT_ROOT / LEGACY_CONFIG_JSON_FILE).exists():
+    CONFIG_PATH = PROJECT_ROOT / LEGACY_CONFIG_JSON_FILE
+else:
+    CONFIG_PATH = PROJECT_ROOT / CONFIG_JSON_FILE
+
+BACKUP_CONFIG_PATH = PROJECT_ROOT / "agentforge_config.backup.json"
 ENV_PATH = PROJECT_ROOT / ".env"
 
 load_dotenv(dotenv_path=ENV_PATH, override=False)
@@ -232,7 +239,10 @@ class AppConfig(BaseModel):
         sb_env = self.get_resolved_sandbox_env()
         try:
             sb_env.parent.mkdir(parents=True, exist_ok=True)
-            subprocess.run([sys.executable, "-m", "venv", str(sb_env)], check=True, capture_output=True)
+            extra_kwargs = {}
+            if sys.platform == "win32":
+                extra_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+            subprocess.run([sys.executable, "-m", "venv", str(sb_env)], check=True, capture_output=True, **extra_kwargs)
             py_exe = self.get_sandbox_python_path()
             if py_exe and py_exe.exists():
                 return True, str(py_exe)
@@ -273,7 +283,7 @@ class AppConfig(BaseModel):
             primary_key = self.providers[0].api_key if self.providers else ""
             primary_url = self.providers[0].base_url if self.providers else ""
             env_lines = [
-                f"# OpenCode 自动持久化配置\n",
+                f"# AgentForge 自动持久化配置\n",
                 f"OPENAI_API_KEY={primary_key}\n",
                 f"OPENAI_BASE_URL={primary_url}\n",
                 f"DEFAULT_MODEL={self.default_model}\n",

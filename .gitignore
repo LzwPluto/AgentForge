@@ -1,7 +1,25 @@
+# 虚拟环境与沙箱
 .venv/
 sandbox_env/
+.pytest_cache/
+
+# Python 字节码与缓存
 __pycache__/
 *.pyc
 *.pyo
+
+# 打包构建产物与临时文件
+dist/
+build/
+output/
 *.zip
-.git/
+*.spec
+
+# 私有环境与持久化密钥 (保留 .env.example)
+.env
+*.backup.json
+
+# 历史记录数据 (保留 .gitkeep)
+history/*.json
+history/*.md
+!history/.gitkeep

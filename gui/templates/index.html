@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentForge - 现代化多智能体圆桌协同开发与创作平台</title>
+  <meta name="description" content="AgentForge: 现代化多智能体圆桌接力协同开发与创作平台 (原生桌面 / WebUI 全形态覆盖)">
+  <link rel="icon" type="image/png" href="/static/img/favicon.png">
+  
+  <!-- Highlight.js CSS -->
+  <link rel="stylesheet" href="/static/vendor/highlight.min.css">
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="theme-cheese">
+  <div id="app-root">
+    
+    <!-- ================= Top Navbar ================= -->
+    <header class="app-header">
+      <div class="brand-section">
+        <div class="brand-logo">
+          <img src="/static/img/logo.png" alt="AgentForge" style="width:28px; height:28px; border-radius:6px; display:block;">
+        </div>
+        <div class="brand-info">
+          <h1>
+            AgentForge
+            <span class="brand-badge">PRO</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="header-center" id="header-center-info">
+        <div class="status-pill">
+          <span class="pulse-dot" id="global-pulse-dot"></span>
+          <span id="global-status-text">🟢 就绪待命</span>
+        </div>
+        <span class="round-info" id="global-round-info">第 0/12 轮</span>
+        <span class="speaker-badge" id="global-speaker-badge"></span>
+      </div>
+
+      <div class="header-actions">
+        <!-- Theme Switcher -->
+        <div class="theme-selector-wrap" title="切换视觉主题">
+          <select id="theme-selector" class="theme-select">
+            <option value="theme-cheese">🧀 奶酪暖色</option>
+            <option value="theme-dark">🌌 暗夜科技</option>
+            <option value="theme-latte">☕ 燕麦拿铁</option>
+            <option value="theme-nordic">🌿 极简雅白</option>
+          </select>
+        </div>
+
+        <!-- Plugins Hub Entry -->
+        <button class="icon-btn" id="btn-open-plugins" title="插件与扩展中心">
+          🧩 <span>插件中心</span>
+        </button>
+
+        <!-- History Manager Entry -->
+        <button class="icon-btn" id="btn-open-history" title="历史会话管理器 (F2)">
+          📜 <span>历史</span>
+        </button>
+
+        <!-- Settings Modal Entry -->
+        <button class="icon-btn primary" id="btn-open-settings" title="平台全局设置 (F1)">
+          ⚙️ <span>设置</span>
+        </button>
+
+        <!-- Clear Chat Button -->
+        <button class="icon-btn" id="btn-clear-chat" title="清屏">
+          🧹
+        </button>
+
+        <!-- WS Live Indicator -->
+        <div class="ws-indicator" id="ws-indicator" title="实时通信连接就绪"></div>
+      </div>
+    </header>
+
+    <!-- ================= 5-Agent Slots Deck ================= -->
+    <section class="agent-deck" id="agent-deck">
+      <!-- Generated dynamically by JS -->
+    </section>
+
+    <!-- ================= Main Workspace Layout ================= -->
+    <main class="workspace-main">
+      
+      <!-- Left Panel: Tasks, Sandbox Files, Diff -->
+      <aside class="left-panel">
+        <div class="panel-tabs">
+          <button class="tab-btn active" data-tab="tasks">📋 任务看板</button>
+          <button class="tab-btn" data-tab="files">📁 沙箱文件</button>
+          <button class="tab-btn" data-tab="diff">🔄 变更对比</button>
+        </div>
+
+        <div class="tab-content" id="tab-content-tasks">
+          <div class="task-list" id="task-list-container">
+            <div class="empty-state" style="text-align:center; color:var(--text-muted); padding:2rem 0;">
+              暂无协同任务，输入总目标后将自动分解推进
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-content-files" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+            <span style="font-size:0.75rem; color:var(--text-muted);" id="workspace-path-label">工作区目录</span>
+            <button class="icon-btn" style="padding:0.2rem 0.5rem; font-size:0.75rem;" id="btn-refresh-files">🔄 刷新</button>
+          </div>
+          <div class="file-list" id="file-list-container">
+            <!-- Files loaded via API -->
+          </div>
+        </div>
+
+        <div class="tab-content" id="tab-content-diff" style="display:none;">
+          <div class="diff-header-bar">
+            <div class="diff-stats-info" id="diff-stats-info">
+              <span class="diff-badge files-count" id="diff-files-count">0 个文件变更</span>
+              <span class="diff-badge additions-count" id="diff-additions-count" style="display:none;">+0</span>
+              <span class="diff-badge deletions-count" id="diff-deletions-count" style="display:none;">-0</span>
+            </div>
+            <div style="display:flex; gap:0.35rem;">
+              <button class="icon-btn" style="padding:0.2rem 0.5rem; font-size:0.75rem;" id="btn-copy-diff" title="复制完整 Diff 文本">📋 复制</button>
+              <button class="icon-btn" style="padding:0.2rem 0.5rem; font-size:0.75rem;" id="btn-refresh-diff" title="刷新 Git Diff">🔄 刷新</button>
+            </div>
+          </div>
+          <div id="diff-view-container" class="diff-container">
+            <!-- Rendered dynamically by app.js -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Panel: Message Stream & Live Thinking -->
+      <section class="right-panel">
+        <div class="chat-history" id="chat-history">
+          <!-- Initial welcome notice -->
+          <div class="msg-card system-notice">
+            <div class="msg-header">
+              <div class="msg-sender-info">
+                <span class="msg-avatar">⚡</span>
+                <span class="msg-sender-name">AgentForge 协同智囊团</span>
+                <span class="msg-badge">Ready</span>
+              </div>
+            </div>
+            <div class="msg-body">
+              欢迎使用 <strong>AgentForge 多智能体圆桌协同开发与创作平台</strong>！<br>
+              当前已应用 <strong>🧀 奶酪暖色质感美学</strong>，支持右上角切换视觉主题与配置 <strong>🧩 扩展插件</strong>。<br>
+              在下方输入框中输入您的创作或开发总目标，点击 <strong>[🚀 协同执行]</strong> 即可拉起 AI 智囊团！
+            </div>
+          </div>
+        </div>
+
+        <!-- Scroll Lock Toggle Button -->
+        <button class="scroll-lock-btn" id="btn-scroll-lock">
+          <span>⬇️ 锁定滚动</span>
+        </button>
+
+        <!-- Floating Dock & Action Controls -->
+        <div class="floating-dock">
+          <div class="dock-inner">
+            <textarea
+              id="goal-input"
+              class="goal-textarea"
+              rows="1"
+              placeholder="💡 输入协同目标 (例如: 联合创作科幻小说第一章，作家起草，审核员润色)..."
+            ></textarea>
+            
+            <div class="dock-btn-group">
+              <button id="btn-run-goal" class="primary-btn">
+                <span>🚀 协同执行</span>
+              </button>
+              <button id="btn-pause-goal" class="warning-btn" style="display:none;">
+                <span>⏸ 暂停/调整</span>
+              </button>
+              <button id="btn-cancel-goal" class="danger-btn" style="display:none;">
+                <span>⏹ 结束</span>
+              </button>
+            </div>
+          </div>
+          <div class="dock-shortcuts-tip">
+            <span>💡 快捷键提示: <strong>Enter</strong> 发送，<strong>Shift+Enter</strong> 换行，<strong>Ctrl+P</strong> 暂停/恢复，<strong>F1</strong> 设置，<strong>F2</strong> 历史记录</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= Plugins Hub Modal ================= -->
+    <div class="modal-overlay" id="modal-plugins">
+      <div class="modal-container" style="max-width: 860px;">
+        <div class="modal-header">
+          <div class="modal-title">🧩 AgentForge 插件与扩展中心 (Plugin Hub)</div>
+          <button class="close-modal-btn" data-close="modal-plugins">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <p style="font-size:0.825rem; color:var(--text-secondary); margin-bottom:1.1rem; line-height:1.5;">
+            扩展插件可为 AI 智能体注入联网搜索、长文本向量记忆、图表渲染、语音播报等高级能力，并支持通过 Python 编写自定义事件钩子。
+          </p>
+
+          <div class="plugin-grid" id="plugins-container">
+            <!-- Loaded dynamically from /api/plugins -->
+          </div>
+
+          <div style="margin-top:1.5rem; background:var(--bg-secondary); border:1px dashed var(--border-medium); border-radius:var(--radius-md); padding:1rem;">
+            <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); margin-bottom:0.35rem;">
+              🛠️ 开发者自定义插件规范 (Python Plugin SDK)
+            </div>
+            <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.5;">
+              只需在 <code>plugins/</code> 目录下继承 <code>BasePlugin</code>，即可轻松实现 <code>on_agent_before_speak</code>, <code>on_tool_call</code> 等钩子或注入自定义沙箱工具。
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="icon-btn primary" data-close="modal-plugins">完成</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Settings Modal (F1) ================= -->
+    <div class="modal-overlay" id="modal-settings">
+      <div class="modal-container" style="max-width: 900px;">
+        <div class="modal-header">
+          <div class="modal-title">⚙️ AgentForge 平台配置与角色管理</div>
+          <button class="close-modal-btn" data-close="modal-settings">&times;</button>
+        </div>
+        
+        <div class="panel-tabs" style="background:var(--bg-surface); padding:0.25rem 1.25rem;">
+          <button class="tab-btn active" data-cfg-tab="providers">🔑 API 供应商</button>
+          <button class="tab-btn" data-cfg-tab="slots">🤖 5 角色槽位分工</button>
+          <button class="tab-btn" data-cfg-tab="sandbox">🛡️ 沙箱与工作区</button>
+          <button class="tab-btn" data-cfg-tab="params">⚡ 编排参数</button>
+        </div>
+
+        <div class="modal-body" style="height: 480px;">
+          <!-- Tab 1: Providers -->
+          <div id="cfg-tab-content-providers">
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">
+              配置各大模型供应商的 API 基础地址、密钥与预设模型。配置的模型将自动在角色槽位中以下拉菜单联动呈现。
+            </p>
+            <div id="providers-container" style="display:flex; flex-direction:column; gap:1rem;">
+              <!-- Loaded dynamically -->
+            </div>
+            <button class="icon-btn" id="btn-add-provider" style="margin-top:1rem;">➕ 添加自定义供应商</button>
+          </div>
+
+          <!-- Tab 2: Agent Slots -->
+          <div id="cfg-tab-content-slots" style="display:none;">
+            <div class="panel-tabs" id="slots-subtabs" style="background:transparent; padding:0; margin-bottom:1rem; border-bottom:1px solid var(--border-subtle);">
+              <!-- Slot 1 ~ 5 tabs -->
+            </div>
+            <div id="slot-form-container">
+              <!-- Render current active slot -->
+            </div>
+          </div>
+
+          <!-- Tab 3: Sandbox & Workspace -->
+          <div id="cfg-tab-content-sandbox" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">📂 工作区根目录路径 (Workspace Root)</label>
+              <input type="text" id="cfg-workspace-root" class="form-input">
+              <span style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem; display:block;">
+                AI 成员读写文件与代码执行的默认工作区根目录。
+              </span>
+            </div>
+
+            <div class="form-group" style="margin-top:1.5rem;">
+              <label class="form-label">🛡️ 内置 AI 独立隔离 Python 沙箱 (sandbox_env)</label>
+              <div style="background:var(--bg-surface); padding:1rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <div style="font-weight:600; font-size:0.9rem;" id="sandbox-status-text">沙箱状态检测中...</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;" id="sandbox-path-text">路径: -</div>
+                  </div>
+                  <button class="primary-btn" id="btn-build-sandbox" style="font-size:0.8rem; padding:0.4rem 0.8rem;">
+                    🔨 一键重新构建独立沙箱
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 4: Advanced Params -->
+          <div id="cfg-tab-content-params" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">🔄 单任务最大接力轮数 (Max Loops Per Task)</label>
+              <input type="number" id="cfg-max-loops" class="form-input" min="1" max="50">
+            </div>
+            <div class="form-group">
+              <label class="form-label">⏱️ 终端命令执行超时秒数 (Command Timeout Seconds)</label>
+              <input type="number" id="cfg-command-timeout" class="form-input" min="10" max="600">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="icon-btn" data-close="modal-settings">取消</button>
+          <button class="primary-btn" id="btn-save-settings">💾 保存并应用配置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= History Modal (F2) ================= -->
+    <div class="modal-overlay" id="modal-history">
+      <div class="modal-container" style="max-width: 960px;">
+        <div class="modal-header">
+          <div class="modal-title">📜 历史会话与会议纪要管理</div>
+          <button class="close-modal-btn" data-close="modal-history">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="history-layout">
+            <div class="history-sidebar" id="history-session-list">
+              <!-- Session cards -->
+            </div>
+            <div class="history-main-preview" id="history-preview-pane">
+              <div style="text-align:center; color:var(--text-muted); padding:4rem 0;">
+                请在左侧选择一次历史会话进行查看
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="justify-content:space-between;">
+          <button class="danger-btn" id="btn-clear-all-history">🗑️ 清空所有历史会话</button>
+          <div style="display:flex; gap:0.5rem;">
+            <button class="icon-btn" id="btn-copy-history-md" style="display:none;">📋 复制 Markdown 纪要</button>
+            <button class="icon-btn primary" data-close="modal-history">关闭</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= File Viewer Modal ================= -->
+    <div class="modal-overlay" id="modal-file-viewer">
+      <div class="modal-container" style="max-width: 850px;">
+        <div class="modal-header">
+          <div class="modal-title" id="file-viewer-title">📄 文件预览</div>
+          <button class="close-modal-btn" data-close="modal-file-viewer">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:0;">
+          <pre style="margin:0; padding:1.25rem; font-size:0.825rem; max-height:500px; overflow:auto; background:var(--code-bg); color:var(--code-text);"><code id="file-viewer-code"></code></pre>
+        </div>
+        <div class="modal-footer">
+          <button class="icon-btn primary" data-close="modal-file-viewer">关闭</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= Toast Notification Container ================= -->
+    <div id="toast-container"></div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="/static/vendor/marked.min.js"></script>
+  <script src="/static/vendor/highlight.min.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

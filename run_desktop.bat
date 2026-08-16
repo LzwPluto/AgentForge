@@ -6,7 +6,7 @@ if not exist ".venv\Scripts\python.exe" (
     call setup_env.bat
 )
 
-echo [INFO] Starting AgentForge Desktop App...
+echo [INFO] Starting AgentForge Multi-Agent Desktop App...
 call .venv\Scripts\activate.bat
 python main.py --app %*
 

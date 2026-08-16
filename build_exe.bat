@@ -6,12 +6,8 @@ if not exist ".venv\Scripts\python.exe" (
     call setup_env.bat
 )
 
-echo [INFO] Starting AgentForge Desktop App...
+echo [INFO] Starting PyInstaller build for AgentForge.exe...
 call .venv\Scripts\activate.bat
-python main.py --app %*
+python build_exe.py
 
-if errorlevel 1 (
-    echo.
-    echo [INFO] Process finished or exited.
-    pause
-)
+pause

@@ -18,11 +18,13 @@ from tui.components.config_modal import ConfigModal
 from tui.components.history_modal import HistoryModal
 
 
-class OpenCodeApp(App):
-    """OpenCode Multi-Agent 协同编码平台主界面 (支持历史会话管理与模型选择联动)"""
+class AgentForgeApp(App):
+    """AgentForge Multi-Agent 协同创作平台主界面 (支持历史会话管理与模型选择联动)"""
 
-    TITLE = "OpenCode Multi-Agent Platform"
+    TITLE = "AgentForge Multi-Agent Platform"
     SUB_TITLE = "多 API 驱动 + 顺序循环圆桌接力 + 历史会话管理 + 中途干预"
+
+OpenCodeApp = AgentForgeApp  # 兼容别名
     CSS = """
     Screen {
         background: #0b0f19;
