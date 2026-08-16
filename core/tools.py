@@ -320,13 +320,19 @@ class SandboxTools:
             # 确保 AI 专用独立隔离沙箱虚拟环境就绪
             config.ensure_sandbox_env()
             sb_env_path = config.get_resolved_sandbox_env()
-            scripts_dir = sb_env_path / ("Scripts" if os.name == "nt" else "bin")
+            sb_py = config.get_sandbox_python_path()
 
-
-            # 构建强隔离环境变量：将 AI 专用沙箱 Scripts 置于 PATH 最前列，注入 VIRTUAL_ENV 并清空 PYTHONPATH
+            # 构建强隔离环境变量：将 AI 专用沙箱 bin/Scripts/根目录 置于 PATH 最前列，注入 VIRTUAL_ENV 并清空干扰
             isolated_env = os.environ.copy()
-            if scripts_dir.exists():
-                isolated_env["PATH"] = f"{str(scripts_dir)}{os.pathsep}{isolated_env.get('PATH', '')}"
+            path_entries = []
+            if sb_py and sb_py.exists():
+                path_entries.append(str(sb_py.parent))
+            scripts_dir = sb_env_path / ("Scripts" if os.name == "nt" else "bin")
+            if scripts_dir.exists() and str(scripts_dir) not in path_entries:
+                path_entries.append(str(scripts_dir))
+
+            if path_entries:
+                isolated_env["PATH"] = f"{os.pathsep.join(path_entries)}{os.pathsep}{isolated_env.get('PATH', '')}"
                 isolated_env["VIRTUAL_ENV"] = str(sb_env_path)
             isolated_env.pop("PYTHONPATH", None)
             isolated_env.pop("PYTHONHOME", None)

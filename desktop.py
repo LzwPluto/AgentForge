@@ -1,10 +1,24 @@
 import sys
 import os
+import io
 import time
 import socket
 import threading
 import urllib.request
 from pathlib import Path
+
+# 确保在 PyInstaller 无控制台模式下 sys.stdout/stderr 具备 isatty 属性，避免 Uvicorn 报错
+class _SafeStreamWriter:
+    def write(self, s): pass
+    def flush(self): pass
+    def isatty(self): return False
+
+if sys.stdout is None:
+    sys.stdout = _SafeStreamWriter()
+if sys.stderr is None:
+    sys.stderr = _SafeStreamWriter()
+if sys.stdin is None:
+    sys.stdin = io.StringIO()
 
 # 确保项目根目录在 sys.path 中
 project_root = Path(__file__).parent.resolve()
@@ -60,7 +74,8 @@ def run_desktop_app():
         host=host,
         port=port,
         log_level="warning",
-        access_log=False
+        access_log=False,
+        log_config=None
     )
     server = uvicorn.Server(server_config)
 

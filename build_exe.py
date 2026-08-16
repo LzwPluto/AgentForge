@@ -104,14 +104,56 @@ def build_executable():
     (target_dir / "history").mkdir(exist_ok=True)
     (target_dir / "测试软件").mkdir(exist_ok=True)
 
-    # 预构建独立的 sandbox_env 虚拟环境
+    # 预构建完全自包含独立的便携式 sandbox_env Python 沙箱环境 (真正免外部 Python 安装)
     sb_target = target_dir / "sandbox_env"
-    if not (sb_target / "Scripts" / "python.exe").exists():
-        print(f"  + Pre-building bundled AI sandbox environment: {sb_target}")
-        try:
-            subprocess.run([sys.executable, "-m", "venv", str(sb_target)], check=True, capture_output=True)
-        except Exception as e:
-            print(f"  [WARN] Pre-building sandbox_env failed: {e}")
+    print(f"  + Pre-building fully self-contained portable Python sandbox in: {sb_target}")
+    try:
+        import zipfile
+        embed_zip = PROJECT_ROOT / "python-3.12.9-embed-amd64.zip"
+        if not embed_zip.exists():
+            zips = list(PROJECT_ROOT.glob("python-*-embed-amd64.zip"))
+            if zips:
+                embed_zip = zips[0]
+
+        if embed_zip.exists():
+            print(f"  + Extracting portable embedded Python from: {embed_zip.name}")
+            if sb_target.exists():
+                shutil.rmtree(sb_target, ignore_errors=True)
+            sb_target.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(embed_zip, "r") as z:
+                z.extractall(sb_target)
+
+            # 配置 ._pth 启用 site 机制与 Lib 模块自动检索
+            for pth_file in sb_target.glob("*._pth"):
+                with open(pth_file, "w", encoding="utf-8") as f:
+                    f.write("python312.zip\n.\nLib\nLib/site-packages\nScripts\n\nimport site\n")
+
+            (sb_target / "Lib" / "site-packages").mkdir(parents=True, exist_ok=True)
+
+        # 补全基础 Lib 标准模块库与 Scripts 工具
+        base_py_dir = Path(getattr(sys, "base_prefix", sys.prefix))
+        if (base_py_dir / "Lib").exists():
+            shutil.copytree(
+                str(base_py_dir / "Lib"),
+                str(sb_target / "Lib"),
+                ignore=shutil.ignore_patterns("__pycache__", "test", "idlelib", "tkinter", "turtledemo"),
+                dirs_exist_ok=True
+            )
+        if (base_py_dir / "Scripts").exists() and not (sb_target / "Scripts").exists():
+            shutil.copytree(str(base_py_dir / "Scripts"), str(sb_target / "Scripts"), dirs_exist_ok=True)
+
+        # 快速测试独立沙箱 Python 解释器
+        test_py = sb_target / "python.exe"
+        if test_py.exists():
+            chk = subprocess.run(
+                [str(test_py), "-c", "import sys, json, math, os; print(f'Portable Embedded Python Verified: {sys.version}')"],
+                capture_output=True,
+                text=True
+            )
+            print(f"  + {chk.stdout.strip()}")
+        print("  + Portable Python sandbox bundled successfully!")
+    except Exception as e:
+        print(f"  [WARN] Pre-building portable sandbox failed: {e}")
 
     # 4. 完成总结
     exe_path = target_dir / "AgentForge.exe"

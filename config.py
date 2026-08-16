@@ -227,12 +227,23 @@ class AppConfig(BaseModel):
         return p
 
     def get_sandbox_python_path(self) -> Optional[Path]:
-        """获取内置 AI 独立沙箱 Python 解释器路径"""
+        """获取内置 AI 独立沙箱 Python 解释器路径 (支持全便携式独立 Python 与标准 venv 格式)"""
         sb_env = self.get_resolved_sandbox_env()
+        # 1. 独立便携式内置 Python 根目录: sandbox_env/python.exe
+        cand1 = sb_env / "python.exe"
+        if cand1.exists():
+            return cand1
+        # 2. 虚拟环境格式: sandbox_env/Scripts/python.exe
         bin_dir = "Scripts" if os.name == "nt" else "bin"
         exe_name = "python.exe" if os.name == "nt" else "python"
-        py_exe = sb_env / bin_dir / exe_name
-        return py_exe if py_exe.exists() else None
+        cand2 = sb_env / bin_dir / exe_name
+        if cand2.exists():
+            return cand2
+        # 3. Unix 格式: sandbox_env/bin/python
+        cand3 = sb_env / "bin" / "python"
+        if cand3.exists():
+            return cand3
+        return None
 
     def find_system_python(self) -> Optional[Path]:
         """寻找系统中可用于创建 venv 的真实 Python 解释器"""
