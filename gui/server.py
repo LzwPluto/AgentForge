@@ -242,8 +242,12 @@ async def api_update_config(new_config: Dict[str, Any]):
         
         config.save_to_file()
         shared_memory.sync_slots_from_config()
-        shared_memory.publish(EventType.CONFIG_RELOADED, config.model_dump())
-        return {"status": "ok", "config": config.model_dump()}
+        payload = {
+            "config": config.model_dump(),
+            "agent_states": shared_memory.agent_states
+        }
+        shared_memory.publish(EventType.CONFIG_RELOADED, payload)
+        return {"status": "ok", "config": config.model_dump(), "agent_states": shared_memory.agent_states}
     except Exception as e:
         logger.exception("配置更新异常")
         raise HTTPException(status_code=400, detail=f"保存配置失败: {str(e)}")

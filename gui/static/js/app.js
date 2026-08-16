@@ -321,7 +321,14 @@ class AgentForgeClient {
         this.showToast("⚠️ 任务结束或被中止", "warning");
         break;
       case "CONFIG_RELOADED":
-        this.state.config = data;
+        if (data.config) {
+          this.state.config = data.config;
+        } else {
+          this.state.config = data;
+        }
+        if (data.agent_states) {
+          this.state.agent_states = data.agent_states;
+        }
         this.renderAgentDeck();
         break;
     }
@@ -569,15 +576,20 @@ class AgentForgeClient {
       const state = this.state.agent_states[slotId] || {};
       const slotCfg = this.state.config?.agent_slots?.find(s => s.slot_id === slotId) || {};
 
-      const isEnabled = slotCfg.enabled ?? true;
-      const status = state.status || (isEnabled ? "IDLE" : "DISABLED");
-      const lastAction = state.last_action || (isEnabled ? "就绪待命" : "未启用");
+      const isEnabled = slotCfg.enabled !== false;
+      const status = isEnabled ? (state.status && state.status !== "DISABLED" ? state.status : "IDLE") : "DISABLED";
+      const lastAction = isEnabled ? (state.last_action && !state.last_action.includes("未启用") ? state.last_action : "就绪待命") : "未启用 (Disabled)";
 
       let activeClass = "";
-      if (status === "SPEAKING") activeClass = "active-speaking";
-      else if (status === "THINKING") activeClass = "active-thinking";
-      else if (status === "EXECUTING_TOOL") activeClass = "active-tool";
-      else if (!isEnabled || status === "DISABLED") activeClass = "disabled";
+      if (!isEnabled || status === "DISABLED") {
+        activeClass = "disabled";
+      } else if (status === "SPEAKING") {
+        activeClass = "active-speaking";
+      } else if (status === "THINKING") {
+        activeClass = "active-thinking";
+      } else if (status === "EXECUTING_TOOL") {
+        activeClass = "active-tool";
+      }
 
       const card = document.createElement("div");
       card.className = `agent-card ${activeClass}`;
@@ -1395,6 +1407,9 @@ class AgentForgeClient {
       const data = await res.json();
       if (data.status === "ok") {
         this.state.config = data.config;
+        if (data.agent_states) {
+          this.state.agent_states = data.agent_states;
+        }
         this.renderAgentDeck();
         this.closeAllModals();
         this.showToast("✔ 多 API 供应商与角色配置已成功保存！", "success");
