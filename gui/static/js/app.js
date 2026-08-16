@@ -221,6 +221,9 @@ class AgentForgeClient {
     // Settings Modal Tab Switching
     document.querySelectorAll("[data-cfg-tab]").forEach((btn) => {
       btn.addEventListener("click", () => {
+        // 切换主标签页前，立即自动把当前填写的供应商、槽位和工作区参数存入内存
+        this.saveAllFormsToMemory();
+
         const tab = btn.getAttribute("data-cfg-tab");
         document.querySelectorAll("[data-cfg-tab]").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
@@ -229,6 +232,11 @@ class AgentForgeClient {
           const contentEl = document.getElementById(`cfg-tab-content-${t}`);
           if (contentEl) contentEl.style.display = (t === tab) ? "block" : "none";
         });
+
+        // 切换到 slots 标签页时，根据最新保存的 providers 重新渲染槽位 (保持下拉选项最新)
+        if (tab === "slots") {
+          this.renderSlotsSettings(this.state.active_slot_tab || 1);
+        }
       });
     });
 
@@ -1157,6 +1165,7 @@ class AgentForgeClient {
       const delBtn = box.querySelector("[data-del-prov]");
       if (delBtn) {
         delBtn.addEventListener("click", () => {
+          this.saveProvidersFormToMemory();
           this.state.config.providers = this.state.config.providers.filter(p => p.id !== prov.id);
           this.renderProvidersSettings();
         });
@@ -1166,7 +1175,29 @@ class AgentForgeClient {
     });
   }
 
+  saveProvidersFormToMemory() {
+    if (!this.state.config?.providers) return;
+    document.querySelectorAll(".prov-base-url").forEach(input => {
+      const id = input.getAttribute("data-prov-id");
+      const prov = this.state.config.providers.find(p => p.id === id);
+      if (prov) prov.base_url = input.value.trim();
+    });
+    document.querySelectorAll(".prov-api-key").forEach(input => {
+      const id = input.getAttribute("data-prov-id");
+      const prov = this.state.config.providers.find(p => p.id === id);
+      if (prov) prov.api_key = input.value.trim();
+    });
+    document.querySelectorAll(".prov-models").forEach(input => {
+      const id = input.getAttribute("data-prov-id");
+      const prov = this.state.config.providers.find(p => p.id === id);
+      if (prov) {
+        prov.models = input.value.split(",").map(m => m.trim()).filter(Boolean);
+      }
+    });
+  }
+
   addCustomProviderUI() {
+    this.saveProvidersFormToMemory();
     const id = prompt("请输入新供应商英文标识 (如 custom_llm):")?.trim();
     if (!id) return;
     const name = prompt("请输入供应商展示名称 (如 自定义模型网关):")?.trim() || id;
@@ -1185,6 +1216,9 @@ class AgentForgeClient {
     const subtabs = document.getElementById("slots-subtabs");
     const container = document.getElementById("slot-form-container");
     if (!subtabs || !container || !this.state.config) return;
+
+    // 切换槽位子标签前，先自动把前一个槽位的所有表单内容存入内存
+    this.saveCurrentSlotFormToMemory();
 
     this.state.active_slot_tab = activeSlotIndex;
     subtabs.innerHTML = "";
@@ -1364,30 +1398,8 @@ class AgentForgeClient {
     document.getElementById("cfg-command-timeout").value = this.state.config.command_timeout_seconds || 60;
   }
 
-  async saveConfigSettings() {
-    // 1. Save provider inputs
-    document.querySelectorAll(".prov-base-url").forEach(input => {
-      const id = input.getAttribute("data-prov-id");
-      const prov = this.state.config.providers.find(p => p.id === id);
-      if (prov) prov.base_url = input.value.trim();
-    });
-    document.querySelectorAll(".prov-api-key").forEach(input => {
-      const id = input.getAttribute("data-prov-id");
-      const prov = this.state.config.providers.find(p => p.id === id);
-      if (prov) prov.api_key = input.value.trim();
-    });
-    document.querySelectorAll(".prov-models").forEach(input => {
-      const id = input.getAttribute("data-prov-id");
-      const prov = this.state.config.providers.find(p => p.id === id);
-      if (prov) {
-        prov.models = input.value.split(",").map(m => m.trim()).filter(Boolean);
-      }
-    });
-
-    // 2. Save active slot
-    this.saveCurrentSlotFormToMemory();
-
-    // 3. Save workspace & params
+  saveWorkspaceAndParamsToMemory() {
+    if (!this.state.config) return;
     const wsInput = document.getElementById("cfg-workspace-root");
     if (wsInput) this.state.config.workspace_root = wsInput.value.trim();
 
@@ -1396,6 +1408,17 @@ class AgentForgeClient {
 
     const timeoutInput = document.getElementById("cfg-command-timeout");
     if (timeoutInput) this.state.config.command_timeout_seconds = parseInt(timeoutInput.value) || 60;
+  }
+
+  saveAllFormsToMemory() {
+    this.saveProvidersFormToMemory();
+    this.saveCurrentSlotFormToMemory();
+    this.saveWorkspaceAndParamsToMemory();
+  }
+
+  async saveConfigSettings() {
+    // 收集所有标签页与槽位的全量输入存入内存对象
+    this.saveAllFormsToMemory();
 
     // Send POST
     try {
