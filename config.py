@@ -6,7 +6,13 @@ from typing import List, Dict, Any, Optional, Tuple
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-PROJECT_ROOT = Path(__file__).parent.resolve()
+import sys
+
+if getattr(sys, "frozen", False):
+    PROJECT_ROOT = Path(sys.executable).parent.resolve()
+else:
+    PROJECT_ROOT = Path(__file__).parent.resolve()
+
 CONFIG_JSON_FILE = "agentforge_config.json"
 LEGACY_CONFIG_JSON_FILE = "opencode_config.json"
 
@@ -228,6 +234,66 @@ class AppConfig(BaseModel):
         py_exe = sb_env / bin_dir / exe_name
         return py_exe if py_exe.exists() else None
 
+    def find_system_python(self) -> Optional[Path]:
+        """寻找系统中可用于创建 venv 的真实 Python 解释器"""
+        import sys
+        if not getattr(sys, "frozen", False):
+            if sys.executable and Path(sys.executable).exists():
+                return Path(sys.executable)
+
+        # 1. 检查环境变量 PATH
+        for name in ["python", "python3", "py"]:
+            p = shutil.which(name)
+            if p:
+                cand = Path(p).resolve()
+                if getattr(sys, "frozen", False) and cand == Path(sys.executable).resolve():
+                    continue
+                if cand.exists():
+                    return cand
+
+        # 2. 检查 Windows 常见安装目录
+        if sys.platform == "win32":
+            import glob
+            patterns = [
+                os.path.expandvars(r"%LOCALAPPDATA%\Programs\Python\Python3*\python.exe"),
+                r"C:\Program Files\Python3*\python.exe",
+                r"C:\Program Files (x86)\Python3*\python.exe",
+                r"C:\Python3*\python.exe",
+                r"D:\Python3*\python.exe",
+                r"D:\Program Files\Python3*\python.exe",
+            ]
+            for pat in patterns:
+                matches = sorted(glob.glob(pat), reverse=True)
+                for m in matches:
+                    p = Path(m)
+                    if p.exists():
+                        return p
+
+            # 3. 检查 Windows 注册表
+            try:
+                import winreg
+                for root_key in [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]:
+                    try:
+                        with winreg.OpenKey(root_key, r"Software\Python\PythonCore") as core_key:
+                            num_subkeys, _, _ = winreg.QueryInfoKey(core_key)
+                            for i in range(num_subkeys):
+                                ver_name = winreg.EnumKey(core_key, i)
+                                try:
+                                    with winreg.OpenKey(core_key, rf"{ver_name}\InstallPath") as inst_key:
+                                        inst_dir, _ = winreg.QueryValueEx(inst_key, "")
+                                        if inst_dir:
+                                            py = Path(inst_dir) / "python.exe"
+                                            if py.exists():
+                                                return py
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        return None
+
     def ensure_sandbox_env(self) -> Tuple[bool, str]:
         """确保内置 AI 独立沙箱已构建就绪，若不存在则自动静默构建"""
         py_exe = self.get_sandbox_python_path()
@@ -237,16 +303,29 @@ class AppConfig(BaseModel):
         import sys
         import subprocess
         sb_env = self.get_resolved_sandbox_env()
+        python_runner = self.find_system_python()
+
+        if not python_runner:
+            return False, "未在系统中检测到 Python 运行环境。独立 EXE 运行模式下，AI 的文件编写与多智能体协同均正常可用；如需运行需 Python 解释器的终端脚本，请在系统中安装 Python 3.10+。"
+
         try:
             sb_env.parent.mkdir(parents=True, exist_ok=True)
             extra_kwargs = {}
             if sys.platform == "win32":
                 extra_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
-            subprocess.run([sys.executable, "-m", "venv", str(sb_env)], check=True, capture_output=True, **extra_kwargs)
+            res = subprocess.run(
+                [str(python_runner), "-m", "venv", str(sb_env)],
+                capture_output=True,
+                **extra_kwargs
+            )
+            if res.returncode != 0:
+                err_msg = res.stderr.decode("utf-8", errors="ignore").strip() or f"exit code {res.returncode}"
+                return False, f"创建沙箱虚拟环境失败: {err_msg}"
+
             py_exe = self.get_sandbox_python_path()
             if py_exe and py_exe.exists():
                 return True, str(py_exe)
-            return False, "未能生成 sandbox_env Python 解析器"
+            return False, "未能生成 sandbox_env Python 解释器"
         except Exception as e:
             return False, f"构建 AI 独立沙箱环境失败: {e}"
 

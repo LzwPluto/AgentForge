@@ -85,14 +85,16 @@ def build_executable():
 
     # 3. 复制运行时配置文件到输出目录
     target_dir = DIST_DIR / "AgentForge"
-    print(f"[3/4] Copying config files to output directory: {target_dir}")
+    print(f"[3/4] Copying config files & pre-building sandbox_env in: {target_dir}")
     target_dir.mkdir(parents=True, exist_ok=True)
 
     files_to_copy = [
         "agentforge_config.json",
-        "opencode_config.json",
+        "agentforge_config.example.json",
+        "agentforge_plugins.json",
         ".env.example",
-        "README.md"
+        "README.md",
+        "LICENSE"
     ]
     for fn in files_to_copy:
         src = PROJECT_ROOT / fn
@@ -101,6 +103,15 @@ def build_executable():
 
     (target_dir / "history").mkdir(exist_ok=True)
     (target_dir / "测试软件").mkdir(exist_ok=True)
+
+    # 预构建独立的 sandbox_env 虚拟环境
+    sb_target = target_dir / "sandbox_env"
+    if not (sb_target / "Scripts" / "python.exe").exists():
+        print(f"  + Pre-building bundled AI sandbox environment: {sb_target}")
+        try:
+            subprocess.run([sys.executable, "-m", "venv", str(sb_target)], check=True, capture_output=True)
+        except Exception as e:
+            print(f"  [WARN] Pre-building sandbox_env failed: {e}")
 
     # 4. 完成总结
     exe_path = target_dir / "AgentForge.exe"
