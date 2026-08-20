@@ -287,6 +287,15 @@
               <label class="form-label">⏱️ 终端命令执行超时秒数 (Command Timeout Seconds)</label>
               <input type="number" id="cfg-command-timeout" class="form-input" min="10" max="600">
             </div>
+            <div class="form-group" style="margin-top:1.25rem; background:var(--bg-surface); padding:0.85rem 1rem; border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+              <label style="display:inline-flex; align-items:center; gap:0.6rem; font-weight:600; cursor:pointer; color:var(--text-primary);">
+                <input type="checkbox" id="cfg-isolate-all-thinking" style="width:16px; height:16px;">
+                <span>🛡️ 全局开启 AI 思考过程隔离保护 (推荐)</span>
+              </label>
+              <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.35rem; margin-left:1.6rem; line-height:1.4;">
+                开启后，所有 AI 成员的深度思考推导（Chain of Thought）仅在前端供人类用户监督查看，绝不传入其他 AI 成员的上下文历史中，防止思维过程相互干扰或提示词偏见。
+              </div>
+            </div>
           </div>
         </div>
 

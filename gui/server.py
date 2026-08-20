@@ -239,6 +239,7 @@ async def api_update_config(new_config: Dict[str, Any]):
         config.sandbox_env_dir = updated_cfg.sandbox_env_dir
         config.max_loops_per_task = updated_cfg.max_loops_per_task
         config.command_timeout_seconds = updated_cfg.command_timeout_seconds
+        config.isolate_all_thinking = updated_cfg.isolate_all_thinking
         
         config.save_to_file()
         shared_memory.sync_slots_from_config()

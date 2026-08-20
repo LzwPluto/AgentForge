@@ -1262,7 +1262,13 @@ class AgentForgeClient {
           <input type="checkbox" id="slot-enabled-cb" ${currentSlot.enabled ? 'checked' : ''}>
           <span>启用该成员槽位 (Enabled)</span>
         </label>
-        <span style="font-size:0.75rem; color:var(--text-muted);">槽位标识: ${currentSlot.slot_id}</span>
+        <div style="display:flex; align-items:center; gap:0.8rem;">
+          <label style="display:inline-flex; align-items:center; gap:0.4rem; font-size:0.78rem; font-weight:500; cursor:pointer; color:var(--text-secondary);" title="开启后，该角色的深度思考推导过程仅在界面供人类监视，不被其他 AI 角色看见">
+            <input type="checkbox" id="slot-isolate-thinking-cb" ${currentSlot.isolate_thinking !== false ? 'checked' : ''}>
+            <span>🔒 思考过程对其他 AI 保密 (隔离思维)</span>
+          </label>
+          <span style="font-size:0.75rem; color:var(--text-muted);">槽位标识: ${currentSlot.slot_id}</span>
+        </div>
       </div>
 
       <div style="display:grid; grid-template-columns: 80px 1fr 1fr; gap:0.6rem; margin-bottom:0.75rem;">
@@ -1343,6 +1349,9 @@ class AgentForgeClient {
     if (modelSelect) currentSlot.model = modelSelect.value;
     if (promptInput) currentSlot.system_prompt = promptInput.value.trim();
 
+    const isolateCb = document.getElementById("slot-isolate-thinking-cb");
+    if (isolateCb) currentSlot.isolate_thinking = isolateCb.checked;
+
     const checkedTools = [];
     document.querySelectorAll(".slot-tool-cb:checked").forEach(cb => checkedTools.push(cb.value));
     currentSlot.allowed_tools = checkedTools;
@@ -1396,6 +1405,10 @@ class AgentForgeClient {
   renderParamsSettings() {
     document.getElementById("cfg-max-loops").value = this.state.config.max_loops_per_task || 10;
     document.getElementById("cfg-command-timeout").value = this.state.config.command_timeout_seconds || 60;
+    const isolateAllCb = document.getElementById("cfg-isolate-all-thinking");
+    if (isolateAllCb) {
+      isolateAllCb.checked = this.state.config.isolate_all_thinking !== false;
+    }
   }
 
   saveWorkspaceAndParamsToMemory() {
@@ -1408,6 +1421,9 @@ class AgentForgeClient {
 
     const timeoutInput = document.getElementById("cfg-command-timeout");
     if (timeoutInput) this.state.config.command_timeout_seconds = parseInt(timeoutInput.value) || 60;
+
+    const isolateAllCb = document.getElementById("cfg-isolate-all-thinking");
+    if (isolateAllCb) this.state.config.isolate_all_thinking = isolateAllCb.checked;
   }
 
   saveAllFormsToMemory() {

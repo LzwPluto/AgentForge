@@ -262,22 +262,24 @@ class SharedMemory:
         return msg
 
     def get_shared_llm_messages_for_agent(self, current_slot_id: str, system_prompt: str) -> List[Dict[str, Any]]:
-        """为当前轮到的 Agent 组装全景群聊上下文"""
+        """为当前轮到的 Agent 组装全景群聊上下文 (支持各角色思考过程保密隔离)"""
         slot_cfg = config.get_slot(current_slot_id)
         my_name = slot_cfg.name if slot_cfg else current_slot_id
+
+        global_isolate = getattr(config, "isolate_all_thinking", True)
 
         system_intro = (
             f"{system_prompt}\n\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
             f"【多智能体圆桌协作规则】:\n"
             f"1. 你当前正在一个多角色协作实时群聊中，你的身份是:【{slot_cfg.icon if slot_cfg else ''} {my_name}】。\n"
-            f"2. 场内所有成员的发言、思考与调用的文件操作结果对全场完全公开透明。\n"
-            f"3. 请仔细阅读前序成员的所有产出与反馈，直接承接并推进工作，充分发挥你的专业职责！\n"
-            f"4. 你可以使用所有开放的沙箱工具（如 write_file 编写、view_file 查看、edit_file_exact 修改、run_command 执行）。\n"
-            f"5. 当你确认团队已彻底达成目标且内容无需再修改时，请在发言末尾包含明确字样【目标已达成】。\n"
-            f"6. 【思考与输出规范】: 深度思考是你的内部逻辑推导。在思考结束后，你必须在正文中输出清晰完整的正式回复、方案总结或工具调用，严禁只进行思考而不输出任何正文！\n"
+            f"2. 场内所有成员的正式发言结论、协作产出与调用的文件操作结果对全场完全公开透明。\n"
+            f"3. 各成员的内部深度思考推导（Chain of Thought）实行独立隔离保护（仅供人类用户在前端监督查看），以确保各角色独立判断、互不干扰。\n"
+            f"4. 请仔细阅读前序成员的所有产出与反馈，直接承接并推进工作，充分发挥你的专业职责！\n"
+            f"5. 你可以使用所有开放的沙箱工具（如 write_file 编写、view_file 查看、edit_file_exact 修改、run_command 执行）。\n"
+            f"6. 当你确认团队已彻底达成目标且内容无需再修改时，请在发言末尾包含明确字样【目标已达成】。\n"
+            f"7. 【思考与输出规范】: 深度思考是你的内部逻辑推导。在思考结束后，你必须在正文中输出清晰完整的正式回复、方案总结或工具调用，严禁只进行思考而不输出任何正文！\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
         )
         llm_messages = [{"role": "system", "content": system_intro}]
 
@@ -300,7 +302,15 @@ class SharedMemory:
                 else:
                     header = f"💬 【{msg.sender_icon} {msg.sender_name} 的发言与产出】"
 
+                # 检查发送方角色的思考过程保密隔离策略
+                sender_slot = config.get_slot(msg.sender_id)
+                sender_isolated = getattr(sender_slot, "isolate_thinking", True) if sender_slot else True
+
                 body = msg.content
+                # 仅当全局未开启隔离 且 发送者未开启隔离 时，才附带思考过程给其他 AI
+                if not global_isolate and not sender_isolated and msg.thinking_content:
+                    body = f"[深度思考过程]:\n{msg.thinking_content}\n\n[正式回复与方案]:\n{body}"
+
                 if msg.tool_results:
                     for tr in msg.tool_results:
                         out_text = tr.get("output", str(tr)) if isinstance(tr, dict) else str(tr)

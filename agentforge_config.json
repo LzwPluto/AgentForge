@@ -70,6 +70,7 @@
       "model": "deepseek-chat",
       "allow_tools": true,
       "thinking_mode": "deep",
+      "isolate_thinking": true,
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -92,6 +93,7 @@
       "model": "deepseek-chat",
       "allow_tools": true,
       "thinking_mode": "deep",
+      "isolate_thinking": true,
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -114,6 +116,7 @@
       "model": "deepseek-chat",
       "allow_tools": true,
       "thinking_mode": "deep",
+      "isolate_thinking": true,
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -136,6 +139,7 @@
       "model": "deepseek-chat",
       "allow_tools": true,
       "thinking_mode": "lite",
+      "isolate_thinking": true,
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -158,6 +162,7 @@
       "model": "deepseek-chat",
       "allow_tools": true,
       "thinking_mode": "deep",
+      "isolate_thinking": true,
       "allowed_tools": [
         "view_file",
         "write_file",
@@ -172,5 +177,6 @@
   "workspace_root": "测试软件",
   "sandbox_env_dir": "sandbox_env",
   "max_loops_per_task": 12,
-  "command_timeout_seconds": 60
+  "command_timeout_seconds": 60,
+  "isolate_all_thinking": true
 }

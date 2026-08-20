@@ -64,6 +64,10 @@ class AgentSlotConfig(BaseModel):
         default="deep",
         description="思考模式: deep(深度思考), lite(轻度思考), off(关闭思考)"
     )
+    isolate_thinking: bool = Field(
+        default=True,
+        description="是否对其他 AI 隐藏本角色的思考过程 (仅人类监督可见，防止思维干扰或提示词策略泄露)"
+    )
     allowed_tools: List[str] = Field(
         default_factory=lambda: list(ALL_TOOLS),
         description="该角色允许调用的工具列表"
@@ -184,6 +188,10 @@ class AppConfig(BaseModel):
     sandbox_env_dir: str = Field(default="sandbox_env", description="内置 AI 独立测试沙箱虚拟环境目录")
     max_loops_per_task: int = Field(default=10, description="最大循环接力轮数")
     command_timeout_seconds: int = Field(default=60)
+    isolate_all_thinking: bool = Field(
+        default=True,
+        description="全局开启 AI 思考过程隔离保护 (开启后所有成员的思考过程均不对其他 AI 公开，仅人类在前端监督可见)"
+    )
 
     def get_provider(self, provider_id: str) -> Optional[APIProviderConfig]:
         for p in self.providers:
